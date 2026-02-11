@@ -1,0 +1,39 @@
+services:
+  app:
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      - OTEL_EXPORTER_OTLP_ENDPOINT=otel-collector:4317
+      - GIN_MODE=release
+    depends_on:
+      - otel-collector
+    networks:
+      - tracing
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:latest
+    command: ["--config=/etc/otel-collector-config.yaml"]
+    volumes:
+      - ./otel-collector-config.yaml:/etc/otel-collector-config.yaml
+    ports:
+      - "4317:4317"   # OTLP gRPC
+      - "4318:4318"   # OTLP HTTP
+    depends_on:
+      - jaeger
+    networks:
+      - tracing
+
+  jaeger:
+    image: jaegertracing/all-in-one:1.70.0
+    ports:
+      - "16686:16686" # Jaeger UI
+      - "14268:14268" # Jaeger collector HTTP
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
+    networks:
+      - tracing
+
+networks:
+  tracing:
+    driver: bridge
