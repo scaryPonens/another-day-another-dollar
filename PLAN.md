@@ -116,19 +116,31 @@ Phase 3 is complete. MCP package + binary, transports, auth/guardrails, tests, a
 
 ---
 
-## Phase 4: LLM Integration — The Advisor Layer
+## Phase 4: LLM Integration — The Advisor Layer ✅ **(Completed)**
 
 **Goal:** Natural language interaction powered by an LLM that synthesizes signals via the MCP surface.
 
-- Integrate Claude or OpenAI API as the "advisor brain"
-- System prompt encodes your risk framework, trading philosophy, and current signals as context
-- Prefer fetching data through MCP tools/resources (or equivalent service adapters) for consistency
-- Flow: `user message → gather context (signals + prices) → construct prompt → LLM response → Telegram`
-- Conversation history stored in Supabase (per-user thread)
-- Commands become conversational: "What do you think about SOL right now?" or "Give me your riskiest play"
+- OpenAI API integrated as the "advisor brain" via official Go SDK (`github.com/openai/openai-go`)
+- System prompt encodes risk framework (1–5 spectrum), trading philosophy, and live market data as dynamic context
+- Data fetched through the same service interfaces MCP uses (`PriceService`, `SignalService`) for consistency
+- Flow: `user message → extract symbols → gather context (signals + prices) → construct prompt → LLM response → Telegram`
+- Conversation history stored in Postgres (`conversation_messages` table, keyed by Telegram `chat_id`)
+- Two interaction modes: free-text messages and `/ask` command both route to the advisor
+- Existing slash commands (`/price`, `/signals`, `/alerts`) remain unchanged for structured data access
 - The LLM doesn't *make* the signals — it **interprets and communicates** them
+- Graceful degradation: advisor is optional (`OPENAI_API_KEY` not set → disabled), LLM/store/context failures handled independently
+- OpenTelemetry tracing on advisor calls (`advisor.ask`, `advisor.gather-context`, `advisor.llm-call`)
 
 **Deliverable:** You chat with the bot naturally. It references real data and real signals through a stable integration layer.
+
+**Status:**
+Phase 4 is complete. The advisor layer includes:
+- `internal/advisor/` package: `AdvisorService` (orchestrates context + LLM), `BuildSystemPrompt` (dynamic prompt with market data), `ExtractSymbols` (targeted context from user messages), `NewOpenAIClient` (SDK wrapper)
+- `internal/repository/conversation_repository.go`: Postgres persistence for per-user conversation threads
+- Migration `000003_create_conversations` for the `conversation_messages` table
+- Telegram bot updated with `/ask` command and `tele.OnText` free-text handler
+- Config: `OPENAI_API_KEY`, `OPENAI_MODEL` (default `gpt-4o-mini`), `ADVISOR_MAX_HISTORY` (default 20)
+- Full unit test coverage across all new code
 
 ---
 

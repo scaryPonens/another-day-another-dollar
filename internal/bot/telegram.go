@@ -23,7 +23,11 @@ type SignalLister interface {
 	ListSignals(ctx context.Context, filter domain.SignalFilter) ([]domain.Signal, error)
 }
 
-func StartTelegramBot(priceService PriceQuerier, signalService SignalLister) *AlertDispatcher {
+type Advisor interface {
+	Ask(ctx context.Context, chatID int64, message string) (string, error)
+}
+
+func StartTelegramBot(priceService PriceQuerier, signalService SignalLister, advisorService Advisor) *AlertDispatcher {
 	token := os.Getenv("TELEGRAM_BOT_TOKEN")
 	if token == "" {
 		log.Println("TELEGRAM_BOT_TOKEN not set, skipping Telegram bot startup")
@@ -139,9 +143,47 @@ func StartTelegramBot(priceService PriceQuerier, signalService SignalLister) *Al
 		}
 	})
 
+	b.Handle("/ask", func(c tele.Context) error {
+		if advisorService == nil {
+			return c.Send("Advisor not configured. Set OPENAI_API_KEY to enable.")
+		}
+		question := strings.TrimSpace(c.Message().Payload)
+		if question == "" {
+			return c.Send("Usage: /ask <question>\nExample: /ask What do you think about BTC?")
+		}
+		return handleAdvisorQuery(c, advisorService, question)
+	})
+
+	b.Handle(tele.OnText, func(c tele.Context) error {
+		if advisorService == nil {
+			return nil
+		}
+		text := strings.TrimSpace(c.Text())
+		if text == "" {
+			return nil
+		}
+		return handleAdvisorQuery(c, advisorService, text)
+	})
+
 	log.Println("Telegram bot started")
 	go b.Start()
 	return alerts
+}
+
+func handleAdvisorQuery(c tele.Context, adv Advisor, question string) error {
+	_ = c.Notify(tele.Typing)
+
+	reply, err := adv.Ask(context.Background(), c.Chat().ID, question)
+	if err != nil {
+		log.Printf("advisor error for chat %d: %v", c.Chat().ID, err)
+		return c.Send("Sorry, I'm having trouble right now. Try /price or /signals for raw data.")
+	}
+
+	if len(reply) > 4000 {
+		reply = reply[:4000] + "\n\n[truncated]"
+	}
+
+	return c.Send(reply)
 }
 
 func parseSignalArgs(args []string) (domain.SignalFilter, error) {

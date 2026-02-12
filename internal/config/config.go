@@ -20,6 +20,10 @@ type Config struct {
 	MCPAuthToken          string
 	MCPRequestTimeoutSecs int
 	MCPRateLimitPerMin    int
+
+	OpenAIAPIKey      string
+	OpenAIModel       string
+	AdvisorMaxHistory int
 }
 
 func Load() *Config {
@@ -82,6 +86,23 @@ func Load() *Config {
 	if v := strings.TrimSpace(os.Getenv("MCP_RATE_LIMIT_PER_MIN")); v != "" {
 		if n, err := strconv.Atoi(v); err == nil && n > 0 {
 			cfg.MCPRateLimitPerMin = n
+		}
+	}
+
+	cfg.OpenAIAPIKey = os.Getenv("OPENAI_API_KEY")
+	if cfg.OpenAIAPIKey == "" {
+		log.Println("Warning: OPENAI_API_KEY not set, advisor will be disabled")
+	}
+
+	cfg.OpenAIModel = strings.TrimSpace(os.Getenv("OPENAI_MODEL"))
+	if cfg.OpenAIModel == "" {
+		cfg.OpenAIModel = "gpt-4o-mini"
+	}
+
+	cfg.AdvisorMaxHistory = 20
+	if v := os.Getenv("ADVISOR_MAX_HISTORY"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 {
+			cfg.AdvisorMaxHistory = n
 		}
 	}
 

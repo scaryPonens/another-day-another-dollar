@@ -10,6 +10,7 @@ import (
 	"syscall"
 	"time"
 
+	"bug-free-umbrella/internal/advisor"
 	"bug-free-umbrella/internal/bot"
 	"bug-free-umbrella/internal/cache"
 	"bug-free-umbrella/internal/config"
@@ -50,8 +51,11 @@ var (
 	newSignalPollerFunc    = job.NewSignalPoller
 	startPollerFunc        = func(p *job.PricePoller, ctx context.Context) { go p.Start(ctx) }
 	startSignalPollerFunc  = func(p *job.SignalPoller, ctx context.Context) { go p.Start(ctx) }
-	startTelegramBotFunc   = bot.StartTelegramBot
-	newWorkServiceFunc     = service.NewWorkService
+	newConversationRepoFunc = repository.NewConversationRepository
+	newOpenAIClientFunc     = advisor.NewOpenAIClient
+	newAdvisorServiceFunc   = advisor.NewAdvisorService
+	startTelegramBotFunc    = bot.StartTelegramBot
+	newWorkServiceFunc      = service.NewWorkService
 	newHandlerFunc         = handler.New
 	newRouterFunc          = gin.Default
 	setupSignalNotify      = ossignal.Notify
@@ -101,9 +105,19 @@ func main() {
 	signalEngine := newSignalEngineFunc(nil)
 	signalService := newSignalServiceFunc(tracer, candleRepo, signalRepo, signalEngine)
 
+	// Create conversation repository and advisor
+	convRepo := newConversationRepoFunc(db.Pool, tracer)
+	var advisorSvc *advisor.AdvisorService
+	if cfg.OpenAIAPIKey != "" {
+		llmClient := newOpenAIClientFunc(cfg.OpenAIAPIKey)
+		advisorSvc = newAdvisorServiceFunc(tracer, llmClient, priceService, signalService,
+			convRepo, cfg.OpenAIModel, cfg.AdvisorMaxHistory)
+		log.Println("Advisor service enabled")
+	}
+
 	// Start Telegram bot
 	os.Setenv("TELEGRAM_BOT_TOKEN", cfg.TelegramBotToken)
-	alertDispatcher := startTelegramBotFunc(priceService, signalService)
+	alertDispatcher := startTelegramBotFunc(priceService, signalService, advisorSvc)
 
 	// Start background pollers (stopped by ctx cancel)
 	poller := newPricePollerFunc(tracer, priceService, cfg.CoinGeckoPollSecs)

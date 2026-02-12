@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"bug-free-umbrella/internal/advisor"
 	"bug-free-umbrella/internal/bot"
 	"bug-free-umbrella/internal/config"
 	"bug-free-umbrella/internal/domain"
@@ -68,6 +69,9 @@ func stubServerDeps() func() {
 	origStartPoller := startPollerFunc
 	origNewSignalPoller := newSignalPollerFunc
 	origStartSignalPoller := startSignalPollerFunc
+	origNewConvRepo := newConversationRepoFunc
+	origNewOpenAIClient := newOpenAIClientFunc
+	origNewAdvisor := newAdvisorServiceFunc
 	origStartTelegram := startTelegramBotFunc
 	origNewRouter := newRouterFunc
 	origSetupSignal := setupSignalNotify
@@ -103,7 +107,17 @@ func stubServerDeps() func() {
 		return nil
 	}
 	startSignalPollerFunc = func(*job.SignalPoller, context.Context) {}
-	startTelegramBotFunc = func(bot.PriceQuerier, bot.SignalLister) *bot.AlertDispatcher { return nil }
+	newConversationRepoFunc = func(repository.PgxPool, trace.Tracer) *repository.ConversationRepository {
+		return nil
+	}
+	newOpenAIClientFunc = func(string) advisor.LLMClient { return nil }
+	newAdvisorServiceFunc = func(
+		trace.Tracer, advisor.LLMClient, advisor.PriceQuerier, advisor.SignalQuerier,
+		advisor.ConversationStore, string, int,
+	) *advisor.AdvisorService {
+		return nil
+	}
+	startTelegramBotFunc = func(bot.PriceQuerier, bot.SignalLister, bot.Advisor) *bot.AlertDispatcher { return nil }
 	newRouterFunc = func(...gin.OptionFunc) *gin.Engine { return gin.New() }
 	setupSignalNotify = func(c chan<- os.Signal, sig ...os.Signal) {}
 	waitForSignalFunc = func(<-chan os.Signal) {}
@@ -123,6 +137,9 @@ func stubServerDeps() func() {
 		startPollerFunc = origStartPoller
 		newSignalPollerFunc = origNewSignalPoller
 		startSignalPollerFunc = origStartSignalPoller
+		newConversationRepoFunc = origNewConvRepo
+		newOpenAIClientFunc = origNewOpenAIClient
+		newAdvisorServiceFunc = origNewAdvisor
 		startTelegramBotFunc = origStartTelegram
 		newRouterFunc = origNewRouter
 		setupSignalNotify = origSetupSignal

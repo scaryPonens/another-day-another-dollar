@@ -57,3 +57,9 @@ const (
 func (r RiskLevel) IsValid() bool {
 	return r >= RiskLevel1 && r <= RiskLevel5
 }
+
+type ConversationMessage struct {
+	Role      string
+	Content   string
+	CreatedAt time.Time
+}
