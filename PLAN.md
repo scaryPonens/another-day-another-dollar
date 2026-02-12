@@ -28,17 +28,24 @@ Phase 0 is complete. The project is scaffolded, all core services are wired, and
 
 ---
 
-## Phase 1: Price Feeds & Storage
+## Phase 1: Price Feeds & Storage ✅ **(Completed)**
 
 **Goal:** Ingest and persist real-time crypto price/volume data.
 
-- Integrate free APIs — start with **CoinGecko** (no key needed) and/or **Binance public API** for crypto. For NYSE/NASDAQ tickers (crypto ETFs like BITO, GBTC, COIN), use **Alpha Vantage** or **Polygon.io** free tier.
-- Background goroutines on a tick interval polling prices + volumes
-- Store OHLCV candles in Postgres (timeseries-friendly schema, consider `timescaledb` extension on Neon if available, otherwise partitioned tables)
-- Redis for latest-price cache (hot path)
-- Telegram: `/price BTC`, `/price ETH`, `/volume SOL` commands
+- CoinGecko free tier API integration (no key needed, ~10 calls/min)
+- Top 10 assets tracked: BTC, ETH, SOL, XRP, ADA, DOGE, DOT, AVAX, LINK, MATIC
+- OHLCV candle intervals: 5m, 15m, 1h, 4h, 1d
+- 3-tier background polling (current prices every 60s, short candles every 5m, long candles every 30m)
+- Token bucket rate limiter (8 tokens/min) to stay within CoinGecko limits
+- Candles stored in Postgres with composite PK `(symbol, interval, open_time)` and idempotent upserts
+- Redis cache-aside for latest prices (90s TTL, refreshed every 60s)
+- HTTP endpoints: `GET /api/prices`, `GET /api/prices/:symbol`, `GET /api/candles/:symbol`
+- Telegram commands: `/price BTC`, `/volume SOL`
 
-**Deliverable:** You can ask the bot for current and recent prices. Data is accumulating.
+**Deliverable:** Bot responds with live prices. Data accumulates in Postgres. Prices cached in Redis.
+
+**Status:**
+Phase 1 is complete. Price ingestion pipeline is fully wired — CoinGecko provider, Postgres candle storage, Redis caching, background polling, HTTP endpoints, and Telegram commands are all operational.
 
 ---
 

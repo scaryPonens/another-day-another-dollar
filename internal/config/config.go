@@ -3,12 +3,14 @@ package config
 import (
 	"log"
 	"os"
+	"strconv"
 )
 
 type Config struct {
-	TelegramBotToken string
-	DatabaseURL      string
-	RedisURL         string
+	TelegramBotToken  string
+	DatabaseURL       string
+	RedisURL          string
+	CoinGeckoPollSecs int
 }
 
 func Load() *Config {
@@ -27,6 +29,13 @@ func Load() *Config {
 	if cfg.RedisURL == "" {
 		log.Println("Warning: REDIS_URL not set, defaulting to localhost:6379")
 		cfg.RedisURL = "localhost:6379"
+	}
+
+	cfg.CoinGeckoPollSecs = 60
+	if v := os.Getenv("COINGECKO_POLL_SECS"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 {
+			cfg.CoinGeckoPollSecs = n
+		}
 	}
 
 	return cfg

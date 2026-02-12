@@ -15,6 +15,59 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
+        "/api/candles/{symbol}": {
+            "get": {
+                "description": "Returns historical candle data for a given asset and interval",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "prices"
+                ],
+                "summary": "Get historical OHLCV candles",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Asset symbol (e.g., BTC, ETH)",
+                        "name": "symbol",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "default": "1h",
+                        "description": "Candle interval (5m, 15m, 1h, 4h, 1d)",
+                        "name": "interval",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 100,
+                        "description": "Number of candles (default 100, max 500)",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/api/hello": {
             "get": {
                 "description": "Returns a hello world greeting",
@@ -28,6 +81,65 @@ const docTemplate = `{
                 "responses": {
                     "200": {
                         "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/prices": {
+            "get": {
+                "description": "Returns latest cached prices for all 10 tracked cryptocurrencies",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "prices"
+                ],
+                "summary": "Get current prices for all supported assets",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/api/prices/{symbol}": {
+            "get": {
+                "description": "Returns the latest cached price, 24h volume, and 24h change",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "prices"
+                ],
+                "summary": "Get current price for a crypto asset",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Asset symbol (e.g., BTC, ETH)",
+                        "name": "symbol",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/domain.PriceSnapshot"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -81,6 +193,28 @@ const docTemplate = `{
                             }
                         }
                     }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "domain.PriceSnapshot": {
+            "type": "object",
+            "properties": {
+                "change_24h_pct": {
+                    "type": "number"
+                },
+                "last_updated_unix": {
+                    "type": "integer"
+                },
+                "price_usd": {
+                    "type": "number"
+                },
+                "symbol": {
+                    "type": "string"
+                },
+                "volume_24h": {
+                    "type": "number"
                 }
             }
         }

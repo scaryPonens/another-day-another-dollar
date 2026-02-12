@@ -1,4 +1,18 @@
 basePath: /
+definitions:
+  domain.PriceSnapshot:
+    properties:
+      change_24h_pct:
+        type: number
+      last_updated_unix:
+        type: integer
+      price_usd:
+        type: number
+      symbol:
+        type: string
+      volume_24h:
+        type: number
+    type: object
 host: localhost:8080
 info:
   contact: {}
@@ -6,6 +20,42 @@ info:
   title: Bug Free Umbrella API
   version: "1.0"
 paths:
+  /api/candles/{symbol}:
+    get:
+      description: Returns historical candle data for a given asset and interval
+      parameters:
+      - description: Asset symbol (e.g., BTC, ETH)
+        in: path
+        name: symbol
+        required: true
+        type: string
+      - default: 1h
+        description: Candle interval (5m, 15m, 1h, 4h, 1d)
+        in: query
+        name: interval
+        type: string
+      - default: 100
+        description: Number of candles (default 100, max 500)
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get historical OHLCV candles
+      tags:
+      - prices
   /api/hello:
     get:
       description: Returns a hello world greeting
@@ -21,6 +71,45 @@ paths:
       summary: Say hello
       tags:
       - api
+  /api/prices:
+    get:
+      description: Returns latest cached prices for all 10 tracked cryptocurrencies
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Get current prices for all supported assets
+      tags:
+      - prices
+  /api/prices/{symbol}:
+    get:
+      description: Returns the latest cached price, 24h volume, and 24h change
+      parameters:
+      - description: Asset symbol (e.g., BTC, ETH)
+        in: path
+        name: symbol
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.PriceSnapshot'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get current price for a crypto asset
+      tags:
+      - prices
   /api/slow:
     get:
       description: Returns a response after a simulated delay

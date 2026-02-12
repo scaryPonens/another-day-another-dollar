@@ -13,6 +13,13 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
+var newTraceExporter = func(ctx context.Context, endpoint string) (sdktrace.SpanExporter, error) {
+	return otlptracegrpc.New(ctx,
+		otlptracegrpc.WithEndpoint(endpoint),
+		otlptracegrpc.WithInsecure(),
+	)
+}
+
 func InitTracer(ctx context.Context) (*sdktrace.TracerProvider, trace.Tracer, error) {
 	if os.Getenv("TRACING_ENABLED") == "false" {
 		tp := sdktrace.NewTracerProvider()
@@ -25,10 +32,7 @@ func InitTracer(ctx context.Context) (*sdktrace.TracerProvider, trace.Tracer, er
 		otelEndpoint = "localhost:4317"
 	}
 
-	exporter, err := otlptracegrpc.New(ctx,
-		otlptracegrpc.WithEndpoint(otelEndpoint),
-		otlptracegrpc.WithInsecure(),
-	)
+	exporter, err := newTraceExporter(ctx, otelEndpoint)
 	if err != nil {
 		return nil, nil, err
 	}
