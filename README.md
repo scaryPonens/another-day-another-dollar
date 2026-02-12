@@ -1,5 +1,8 @@
 # bug-free-umbrella
 
+[![Tests](https://github.com/scaryPonens/bug-free-umbrella/actions/workflows/tests.yml/badge.svg?branch=main)](https://github.com/scaryPonens/bug-free-umbrella/actions/workflows/tests.yml)
+![Coverage](https://img.shields.io/badge/Coverage-77%25-brightgreen.svg)
+
 
 Go-based crypto trading advisor bot. Tracks live crypto prices, stores OHLCV candles, and serves data via HTTP and Telegram.
 

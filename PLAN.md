@@ -41,11 +41,13 @@ Phase 0 is complete. The project is scaffolded, all core services are wired, and
 - Redis cache-aside for latest prices (90s TTL, refreshed every 60s)
 - HTTP endpoints: `GET /api/prices`, `GET /api/prices/:symbol`, `GET /api/candles/:symbol`
 - Telegram commands: `/price BTC`, `/volume SOL`
+- Automated CI: GitHub Actions workflow runs `go test ./...` with coverage on every push to `main`, with README badges surfacing test/coverage status
+- Extensive unit test suite covering services, handlers, providers, caching, tracing, and bootstrapping logic (added in previous iteration)
 
 **Deliverable:** Bot responds with live prices. Data accumulates in Postgres. Prices cached in Redis.
 
 **Status:**
-Phase 1 is complete. Price ingestion pipeline is fully wired — CoinGecko provider, Postgres candle storage, Redis caching, background polling, HTTP endpoints, and Telegram commands are all operational.
+Phase 1 is complete. Price ingestion pipeline is fully wired — CoinGecko provider, Postgres candle storage, Redis caching, background polling, HTTP endpoints, and Telegram commands are all operational. CI now enforces the growing unit test suite (85%+ package-level coverage; ~77% total) and README badges advertise build health.
 
 ---
 
