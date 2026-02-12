@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	ossignal "os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -90,17 +91,9 @@ func main() {
 		}
 	}()
 
-	// Create repository and run migrations
+	// Create repositories
 	candleRepo := newCandleRepoFunc(db.Pool, tracer)
 	signalRepo := newSignalRepoFunc(db.Pool, tracer)
-	if db.Pool != nil {
-		if err := candleRepo.RunMigrations(ctx); err != nil {
-			log.Fatalf("failed to run migrations: %v", err)
-		}
-		if err := signalRepo.RunMigrations(ctx); err != nil {
-			log.Fatalf("failed to run signal migrations: %v", err)
-		}
-	}
 
 	// Create providers and services
 	cgProvider := newCoinGeckoProviderFunc(tracer)
@@ -129,7 +122,7 @@ func main() {
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	srv := &http.Server{
-		Addr:    ":8080",
+		Addr:    httpAddrFromEnv(),
 		Handler: r,
 	}
 
@@ -154,4 +147,15 @@ func main() {
 	}
 
 	log.Println("Server exiting")
+}
+
+func httpAddrFromEnv() string {
+	port := strings.TrimSpace(os.Getenv("PORT"))
+	if port == "" {
+		return ":8080"
+	}
+	if strings.HasPrefix(port, ":") {
+		return port
+	}
+	return ":" + port
 }

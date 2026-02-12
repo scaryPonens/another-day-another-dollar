@@ -12,24 +12,6 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-const createSignalsTable = `
-CREATE TABLE IF NOT EXISTS signals (
-    id          BIGSERIAL PRIMARY KEY,
-    symbol      TEXT        NOT NULL,
-    interval    TEXT        NOT NULL,
-    indicator   TEXT        NOT NULL,
-    direction   TEXT        NOT NULL,
-    risk        SMALLINT    NOT NULL,
-    timestamp   TIMESTAMPTZ NOT NULL,
-    details     TEXT        NOT NULL DEFAULT '',
-    created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    UNIQUE (symbol, interval, indicator, timestamp, direction)
-);
-
-CREATE INDEX IF NOT EXISTS idx_signals_lookup
-    ON signals (symbol, risk, indicator, timestamp DESC);
-`
-
 type SignalRepository struct {
 	pool   PgxPool
 	tracer trace.Tracer
@@ -37,14 +19,6 @@ type SignalRepository struct {
 
 func NewSignalRepository(pool PgxPool, tracer trace.Tracer) *SignalRepository {
 	return &SignalRepository{pool: pool, tracer: tracer}
-}
-
-func (r *SignalRepository) RunMigrations(ctx context.Context) error {
-	_, span := r.tracer.Start(ctx, "signal-repo.run-migrations")
-	defer span.End()
-
-	_, err := r.pool.Exec(ctx, createSignalsTable)
-	return err
 }
 
 func (r *SignalRepository) InsertSignals(ctx context.Context, signals []domain.Signal) error {

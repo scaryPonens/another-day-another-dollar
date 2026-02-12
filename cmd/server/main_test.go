@@ -38,6 +38,23 @@ func TestMainBootstrap(t *testing.T) {
 	}
 }
 
+func TestHTTPAddrFromEnv(t *testing.T) {
+	t.Setenv("PORT", "")
+	if got := httpAddrFromEnv(); got != ":8080" {
+		t.Fatalf("expected default :8080, got %s", got)
+	}
+
+	t.Setenv("PORT", "9090")
+	if got := httpAddrFromEnv(); got != ":9090" {
+		t.Fatalf("expected :9090, got %s", got)
+	}
+
+	t.Setenv("PORT", ":7070")
+	if got := httpAddrFromEnv(); got != ":7070" {
+		t.Fatalf("expected :7070, got %s", got)
+	}
+}
+
 func stubServerDeps() func() {
 	origLoadEnv := loadEnvFunc
 	origLoadConfig := loadConfigFunc

@@ -26,6 +26,7 @@ Go-based crypto trading advisor bot. Tracks live crypto prices, stores OHLCV can
 
 ```
 cmd/server/            Entrypoint and dependency wiring
+cmd/migrate/           Versioned Postgres schema migrations runner
 internal/bot/          Telegram bot commands
 internal/cache/        Redis client initialization
 internal/config/       Environment variable loading
@@ -45,7 +46,13 @@ docs/                  Generated Swagger spec (do not edit manually)
 ## Setup & Running
 
 1. Copy `.env.example` to `.env` and fill in required secrets (see below).
-2. Start all services (API, Postgres, Redis, OTel, Jaeger) with:
+2. Run schema migrations:
+
+```sh
+docker compose --env-file .env run --rm app ./migrate up
+```
+
+3. Start all services (API, Postgres, Redis, OTel, Jaeger) with:
 
 ```sh
 docker compose --env-file .env up --build
@@ -70,12 +77,16 @@ DATABASE_URL=postgres://postgres:postgres@db:5432/postgres?sslmode=disable
 
 # Redis
 REDIS_URL=redis:6379
+# or Redis Cloud URL (TLS):
+# REDIS_URL=rediss://default:password@your-host:6380/0
 
 # CoinGecko polling interval in seconds (default 60)
 COINGECKO_POLL_SECS=60
 ```
 
 > **Note:** The default Docker Compose setup will run Postgres and Redis containers for you. The app will auto-connect using the above variables.
+> In Railway, the platform sets `PORT` automatically and the app binds to that port.
+> Migrations are no longer executed during app startup. Run `go run ./cmd/migrate up` (or `./migrate up` in the container) before starting the server.
 
 | Service     | URL                                    |
 |-------------|----------------------------------------|
@@ -133,6 +144,32 @@ Signal generation runs in a separate poller:
 | 2    | Long-interval signals (4h/1d)       | Every 30min|
 
 Polling interval is configurable via `COINGECKO_POLL_SECS` (default 60).
+
+## Database Migrations
+
+Run pending migrations:
+
+```sh
+go run ./cmd/migrate up
+```
+
+If using Docker Compose:
+
+```sh
+docker compose --env-file .env run --rm app ./migrate up
+```
+
+Roll back one migration:
+
+```sh
+go run ./cmd/migrate down
+```
+
+Check current applied version:
+
+```sh
+go run ./cmd/migrate version
+```
 
 
 ## Regenerating Swagger Docs

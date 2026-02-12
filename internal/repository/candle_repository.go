@@ -11,23 +11,6 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-const createCandlesTable = `
-CREATE TABLE IF NOT EXISTS candles (
-    symbol      TEXT        NOT NULL,
-    interval    TEXT        NOT NULL,
-    open_time   TIMESTAMPTZ NOT NULL,
-    open        NUMERIC     NOT NULL,
-    high        NUMERIC     NOT NULL,
-    low         NUMERIC     NOT NULL,
-    close       NUMERIC     NOT NULL,
-    volume      NUMERIC     NOT NULL,
-    PRIMARY KEY (symbol, interval, open_time)
-);
-
-CREATE INDEX IF NOT EXISTS idx_candles_symbol_interval_time
-    ON candles (symbol, interval, open_time DESC);
-`
-
 type PgxPool interface {
 	Exec(ctx context.Context, sql string, args ...any) (pgconn.CommandTag, error)
 	SendBatch(ctx context.Context, b *pgx.Batch) pgx.BatchResults
@@ -41,14 +24,6 @@ type CandleRepository struct {
 
 func NewCandleRepository(pool PgxPool, tracer trace.Tracer) *CandleRepository {
 	return &CandleRepository{pool: pool, tracer: tracer}
-}
-
-func (r *CandleRepository) RunMigrations(ctx context.Context) error {
-	_, span := r.tracer.Start(ctx, "candle-repo.run-migrations")
-	defer span.End()
-
-	_, err := r.pool.Exec(ctx, createCandlesTable)
-	return err
 }
 
 func (r *CandleRepository) UpsertCandles(ctx context.Context, candles []*domain.Candle) error {

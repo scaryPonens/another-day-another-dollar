@@ -13,18 +13,6 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-func TestSignalRunMigrationsExecutesSchema(t *testing.T) {
-	pool := &signalStubPool{}
-	repo := NewSignalRepository(pool, trace.NewNoopTracerProvider().Tracer("test"))
-
-	if err := repo.RunMigrations(context.Background()); err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if len(pool.execSQL) == 0 {
-		t.Fatal("expected Exec to be called")
-	}
-}
-
 func TestSignalInsertSignalsBatchesStatements(t *testing.T) {
 	batchResults := &signalStubBatchResults{}
 	pool := &signalStubPool{batchResults: batchResults}
@@ -85,14 +73,12 @@ func TestSignalListSignalsReturnsRows(t *testing.T) {
 }
 
 type signalStubPool struct {
-	execSQL      []string
 	batchResults pgx.BatchResults
 	queuedBatch  *pgx.Batch
 	rowsData     [][]any
 }
 
 func (s *signalStubPool) Exec(ctx context.Context, sql string, args ...any) (pgconn.CommandTag, error) {
-	s.execSQL = append(s.execSQL, sql)
 	return pgconn.CommandTag{}, nil
 }
 

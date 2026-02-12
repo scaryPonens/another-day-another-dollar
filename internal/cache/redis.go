@@ -4,6 +4,7 @@ import (
 	"context"
 	"log"
 	"os"
+	"strings"
 
 	"github.com/redis/go-redis/v9"
 )
@@ -17,6 +18,7 @@ var (
 	pingRedis = func(ctx context.Context, client *redis.Client) error {
 		return client.Ping(ctx).Err()
 	}
+	parseRedisURL = redis.ParseURL
 )
 
 func InitRedis(ctx context.Context) {
@@ -24,9 +26,17 @@ func InitRedis(ctx context.Context) {
 	if addr == "" {
 		addr = "localhost:6379"
 	}
-	Client = newRedisClient(&redis.Options{
-		Addr: addr,
-	})
+
+	opts := &redis.Options{Addr: addr}
+	if strings.HasPrefix(addr, "redis://") || strings.HasPrefix(addr, "rediss://") {
+		parsed, err := parseRedisURL(addr)
+		if err != nil {
+			log.Fatalf("failed to parse REDIS_URL: %v", err)
+		}
+		opts = parsed
+	}
+
+	Client = newRedisClient(opts)
 	if err := pingRedis(ctx, Client); err != nil {
 		log.Fatalf("failed to connect to Redis: %v", err)
 	}

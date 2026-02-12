@@ -1,6 +1,6 @@
 # Crypto Trading Advisor Bot — Phased Plan
 
-> **Project:** A Go-based crypto trading advisor bot that follows crypto prices, trade volumes, and sentiment across exchanges (NYSE, NASDAQ, and crypto-native exchanges) using ML, classic fundamentals, and day trading tactics. Recommendations are scored on a 1–5 risk spectrum. Interfaces via Telegram bot (LLM-powered) and an SSH terminal UI (à la terminal.shop). Deployed to Railway with Supabase, NeonDB, and Redis.
+> **Project:** A Go-based crypto trading advisor bot that follows crypto prices, trade volumes, and sentiment using deterministic signal generation plus an advisor layer. Recommendations are scored on a 1–5 risk spectrum. Interfaces via Telegram bot and, later, an SSH terminal UI (à la terminal.shop). Deploy target: Railway app service with NeonDB + Redis Cloud.
 
 ---
 
@@ -51,7 +51,7 @@ Phase 1 is complete. Price ingestion pipeline is fully wired — CoinGecko provi
 
 ---
 
-## Phase 2: Signal Engine v1 — Classic Indicators
+## Phase 2: Signal Engine v1 — Classic Indicators ✅ **(Completed)**
 
 **Goal:** First actual trade signals using well-understood technical analysis.
 
@@ -68,7 +68,15 @@ Phase 1 is complete. Price ingestion pipeline is fully wired — CoinGecko provi
 - Store signals in Postgres with timestamp, asset, indicator, risk, direction (long/short/hold)
 - Telegram: `/signals BTC`, `/signals --risk 3` filters
 
-**Deliverable:** Bot proactively (or on-demand) tells you "RSI on ETH is oversold on 4h, risk 2, historically X% accuracy on this signal."
+**Deliverable:** Bot proactively (or on-demand) tells you "RSI on ETH is oversold on 4h, risk 2."
+
+**Status:**
+Phase 2 is complete. The repository now includes:
+- A deterministic classic indicator engine (`RSI`, `MACD`, `Bollinger breakout`, `volume z-score`) implemented as pure candle-to-signal functions.
+- Signal persistence in Postgres with idempotent inserts and query filters.
+- Signal generation poller (short and long interval tiers) plus HTTP endpoint `GET /api/signals`.
+- Telegram signal command support (`/signals BTC`, `/signals --risk 3`).
+- Proactive Telegram signal alerts with chat-level opt-in/out commands (`/alerts on|off|status`).
 
 ---
 
@@ -146,7 +154,24 @@ Phase 1 is complete. Price ingestion pipeline is fully wired — CoinGecko provi
 - Rate limiting, error budgets, observability (structured logging, OpenTelemetry)
 - Multi-user support if you want to share it
 
+**Status update (early work pulled forward):**
+- Telegram-side proactive alerts are already partially implemented in Phase 2 (`/alerts on|off|status`), with dedupe logic to avoid repeated notifications for identical generated signals.
+
 ---
+
+## Cross-Phase Infra Update ✅ **(Completed)**
+
+**Goal:** Make schema evolution and deployment safer for production.
+
+- Migration SQL moved out of repository `RunMigrations` methods into versioned SQL files.
+- Dedicated migration runner added at `cmd/migrate` (`up`, `down`, `version`).
+- App startup no longer mutates database schema automatically.
+- Container image now includes both `main` and `migrate` binaries for deploy-time migrations.
+
+**Status:**
+Complete. Recommended deployment flow is now:
+1. Run `./migrate up`
+2. Start `./main`
 
 ## Architecture at a Glance
 
@@ -185,11 +210,11 @@ Phase 1 is complete. Price ingestion pipeline is fully wired — CoinGecko provi
 
 ---
 
-## Suggested Tech Choices
+## Suggested Tech Choices (Revalidated)
 
 | Concern | Choice | Why |
 |---|---|---|
-| Telegram bot | `gotgbot` | Active, well-typed, middleware support |
+| Telegram bot | `telebot` (already integrated) | Existing implementation is live and tested |
 | SSH TUI | Wish + Bubble Tea | Charm ecosystem, built for this |
 | LLM | Claude API | Already in the ecosystem |
 | TA indicators | `github.com/sdcoffey/techan` or hand-roll | Techan is decent; pure functions are easy to write in Go |
@@ -203,11 +228,9 @@ Phase 1 is complete. Price ingestion pipeline is fully wired — CoinGecko provi
 | Sprint | Phases | Duration | Key Milestone |
 |---|---|---|---|
 | 1 | 0 + 1 | 1–2 weeks | Bot responds with live prices, data accumulating |
-| 2 | 2 | 1–2 weeks | First trading signals (RSI, MACD, Bollinger) |
+| 2 | 2 | 1–2 weeks | First trading signals (RSI, MACD, Bollinger) ✅ |
 | 3 | 3 | 1 week | Natural language chat with LLM advisor |
 | 4 | 4 | 2–3 weeks | ML models running, backtesting accuracy tracked |
 | 5 | 5 | 2 weeks | Sentiment + on-chain signals integrated |
 | 6 | 6 | 1–2 weeks | SSH terminal interface live |
 | 7 | 7 | Ongoing | Paper trading, alerts, hardening |
-
-Start with Phase 0+1 as a single sprint. Once you're ingesting prices and the bot talks, momentum carries the rest.

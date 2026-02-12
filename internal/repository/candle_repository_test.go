@@ -13,18 +13,6 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-func TestRunMigrationsExecutesSchema(t *testing.T) {
-	pool := &stubPool{}
-	repo := NewCandleRepository(pool, trace.NewNoopTracerProvider().Tracer("test"))
-
-	if err := repo.RunMigrations(context.Background()); err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if len(pool.execSQL) == 0 {
-		t.Fatal("expected Exec to be called")
-	}
-}
-
 func TestUpsertCandlesBatchesStatements(t *testing.T) {
 	batchResults := &stubBatchResults{}
 	pool := &stubPool{batchResults: batchResults}
@@ -79,14 +67,12 @@ func TestGetCandlesInRange(t *testing.T) {
 }
 
 type stubPool struct {
-	execSQL      []string
 	batchResults pgx.BatchResults
 	queuedBatch  *pgx.Batch
 	rowsData     [][]any
 }
 
 func (s *stubPool) Exec(ctx context.Context, sql string, args ...any) (pgconn.CommandTag, error) {
-	s.execSQL = append(s.execSQL, sql)
 	return pgconn.CommandTag{}, nil
 }
 
