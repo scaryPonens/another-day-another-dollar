@@ -121,6 +121,7 @@ MCP_RATE_LIMIT_PER_MIN=60
 | GET    | /api/candles/:symbol  | OHLCV candles (`?interval=1h&limit=100`)       |
 | GET    | /api/signals          | Technical signals (`?symbol=BTC&risk=3&limit=50`) |
 | GET    | /api/signals/:id/image | Signal chart image (`image/png`)                  |
+| POST   | /api/ml/train         | Manually trigger ML training cycle (when ML is enabled) |
 
 Supported candle intervals: `5m`, `15m`, `1h`, `4h`, `1d`. Default limit is 100 (max 500).
 

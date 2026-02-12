@@ -49,3 +49,9 @@ func TestRiskLevelIsValid(t *testing.T) {
 		t.Fatal("expected out-of-range risk levels to be invalid")
 	}
 }
+
+func TestMLIndicatorConstants(t *testing.T) {
+	if IndicatorMLLogRegUp4H == "" || IndicatorMLXGBoostUp4H == "" || IndicatorMLEnsembleUp4H == "" {
+		t.Fatal("expected ML indicator constants to be non-empty")
+	}
+}

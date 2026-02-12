@@ -186,6 +186,52 @@ Phase 5 is complete. The repository now includes:
 
 **Deliverable:** Signals now come from both rule-based and ML sources. You have a backtesting table showing accuracy.
 
+**Status:**
+Phase 6 is **partially complete** (initial v2 slice shipped). The repository now includes:
+- Postgres ML schema + reporting view via migration `000005_create_ml_phase6`:
+  - `ml_feature_rows`
+  - `ml_model_versions`
+  - `ml_predictions`
+  - `ml_accuracy_daily` view
+- ML domain additions (`MLFeatureRow`, `MLModelVersion`, `MLPrediction`) and ML indicator keys:
+  - `ml_logreg_up4h`
+  - `ml_xgboost_up4h`
+  - `ml_ensemble_up4h`
+- Go-native ML stack under `internal/ml/`:
+  - feature engine (1h interval, 4h target labels)
+  - logistic regression model
+  - XGBoost-style model via `github.com/rmera/boo`
+  - model registry repository
+  - prediction repository (including resolve lifecycle)
+  - training service (chronological split + metrics + promotion logic)
+  - inference service (ML + ensemble predictions and signal emission)
+  - ensemble scorer (classic + ML weighted voting)
+- New `internal/ta/` shared indicator helpers for RSI/MACD/Bollinger/statistics.
+- ML orchestration service and background jobs:
+  - feature/inference cycle
+  - daily training cycle
+  - outcome resolver cycle
+- Config support for ML runtime controls (`ML_ENABLED`, cadence/threshold/window vars).
+- Existing signal surfaces now accept ML indicators:
+  - HTTP `GET /api/signals`
+  - MCP `signals_list` indicator normalization
+- Manual trigger endpoint for training:
+  - `POST /api/ml/train`
+
+**Remaining to implement in Phase 6:**
+- Advanced model track called out in plan:
+  - LSTM/Transformer prediction service
+  - anomaly detection (e.g., isolation forest)
+- Broaden ML coverage beyond initial `1h` interval rollout (if desired for this phase).
+- Add fuller Phase 6 test coverage listed in the plan for:
+  - registry edge/concurrency behavior
+  - inference persistence + signal attach behavior
+  - outcome resolver idempotency edge cases
+  - end-to-end accuracy/backtesting validation scenarios
+- Complete operational rollout steps in production:
+  - explicit one-time historical feature backfill execution
+  - enable/monitor workflow (`ML_ENABLED=true`) with ongoing drift/accuracy monitoring against `ml_accuracy_daily`.
+
 ---
 
 ## Phase 7: Fundamentals & Sentiment

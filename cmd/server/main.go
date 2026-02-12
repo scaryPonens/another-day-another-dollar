@@ -18,6 +18,12 @@ import (
 	"bug-free-umbrella/internal/db"
 	"bug-free-umbrella/internal/handler"
 	"bug-free-umbrella/internal/job"
+	"bug-free-umbrella/internal/ml/ensemble"
+	"bug-free-umbrella/internal/ml/features"
+	"bug-free-umbrella/internal/ml/inference"
+	"bug-free-umbrella/internal/ml/predictions"
+	"bug-free-umbrella/internal/ml/registry"
+	"bug-free-umbrella/internal/ml/training"
 	"bug-free-umbrella/internal/provider"
 	"bug-free-umbrella/internal/repository"
 	"bug-free-umbrella/internal/service"
@@ -133,10 +139,72 @@ func main() {
 	startSignalPollerFunc(signalPoller, ctx)
 	signalImageJob := newSignalImageJobFunc(tracer, signalService)
 	startSignalImageJobFunc(signalImageJob, ctx)
+	var mlService *service.MLSignalService
+	if cfg.MLEnabled {
+		if db.Pool == nil {
+			log.Println("ML jobs disabled: DATABASE_URL is required for ML feature/model storage")
+		} else {
+			mlFeatureRepo := features.NewRepository(db.Pool, tracer)
+			mlRegistryRepo := registry.NewRepository(db.Pool, tracer)
+			mlPredictionRepo := predictions.NewRepository(db.Pool, tracer)
+			mlTrainingSvc := training.NewService(tracer, mlFeatureRepo, mlRegistryRepo, training.Config{
+				Interval:        cfg.MLInterval,
+				TrainWindowDays: cfg.MLTrainWindowDays,
+				MinTrainSamples: cfg.MLMinTrainSamples,
+			})
+			mlInferenceSvc := inference.NewService(
+				tracer,
+				mlFeatureRepo,
+				mlRegistryRepo,
+				mlPredictionRepo,
+				signalRepo,
+				ensemble.NewService(),
+				inference.Config{
+					Interval:       cfg.MLInterval,
+					TargetHours:    cfg.MLTargetHours,
+					LongThreshold:  cfg.MLLongThreshold,
+					ShortThreshold: cfg.MLShortThreshold,
+				},
+			)
+			mlService = service.NewMLSignalService(
+				tracer,
+				candleRepo,
+				features.NewEngine(nil),
+				mlFeatureRepo,
+				mlTrainingSvc,
+				mlInferenceSvc,
+				mlPredictionRepo,
+				service.MLSignalServiceConfig{
+					Interval:        cfg.MLInterval,
+					TargetHours:     cfg.MLTargetHours,
+					TrainWindowDays: cfg.MLTrainWindowDays,
+				},
+			)
+			go job.NewMLFeatureInferenceJob(
+				tracer,
+				mlService,
+				time.Duration(cfg.MLInferPollSecs)*time.Second,
+			).Start(ctx)
+			go job.NewMLTrainingJob(tracer, mlService, cfg.MLTrainHourUTC).Start(ctx)
+			go job.NewMLOutcomeResolverJob(
+				tracer,
+				mlService,
+				time.Duration(cfg.MLResolvePollSecs)*time.Second,
+				200,
+			).Start(ctx)
+			log.Printf(
+				"ML jobs enabled interval=%s target_hours=%d train_window_days=%d",
+				cfg.MLInterval, cfg.MLTargetHours, cfg.MLTrainWindowDays,
+			)
+		}
+	}
 
 	// Create handlers and routes
 	workService := newWorkServiceFunc(tracer)
 	h := newHandlerFunc(tracer, workService, priceService, signalService)
+	if mlService != nil {
+		h.SetMLTrainingRunner(mlService)
+	}
 
 	r := newRouterFunc()
 	r.Use(otelgin.Middleware("bug-free-umbrella"))

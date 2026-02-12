@@ -16,10 +16,13 @@ const (
 )
 
 const (
-	IndicatorRSI       = "rsi"
-	IndicatorMACD      = "macd"
-	IndicatorBollinger = "bollinger"
-	IndicatorVolumeZ   = "volume_zscore"
+	IndicatorRSI            = "rsi"
+	IndicatorMACD           = "macd"
+	IndicatorBollinger      = "bollinger"
+	IndicatorVolumeZ        = "volume_zscore"
+	IndicatorMLLogRegUp4H   = "ml_logreg_up4h"
+	IndicatorMLXGBoostUp4H  = "ml_xgboost_up4h"
+	IndicatorMLEnsembleUp4H = "ml_ensemble_up4h"
 )
 
 type Signal struct {
@@ -77,4 +80,64 @@ type ConversationMessage struct {
 	Role      string
 	Content   string
 	CreatedAt time.Time
+}
+
+type MLFeatureRow struct {
+	Symbol        string
+	Interval      string
+	OpenTime      time.Time
+	Ret1H         float64
+	Ret4H         float64
+	Ret12H        float64
+	Ret24H        float64
+	Volatility6H  float64
+	Volatility24H float64
+	VolumeZ24H    float64
+	RSI14         float64
+	MACDLine      float64
+	MACDSignal    float64
+	MACDHist      float64
+	BBPos         float64
+	BBWidth       float64
+	TargetUp4H    *bool
+	CreatedAt     time.Time
+	UpdatedAt     time.Time
+}
+
+type MLModelVersion struct {
+	ID                 int64
+	ModelKey           string
+	Version            int
+	FeatureSpecVersion string
+	TrainedFrom        time.Time
+	TrainedTo          time.Time
+	TrainedAt          time.Time
+	HyperparamsJSON    string
+	MetricsJSON        string
+	ArtifactFormat     string
+	ArtifactBlob       []byte
+	IsActive           bool
+	ActivatedAt        *time.Time
+	CreatedAt          time.Time
+}
+
+type MLPrediction struct {
+	ID             int64
+	Symbol         string
+	Interval       string
+	OpenTime       time.Time
+	TargetTime     time.Time
+	ModelKey       string
+	ModelVersion   int
+	ProbUp         float64
+	Confidence     float64
+	Direction      SignalDirection
+	Risk           RiskLevel
+	SignalID       *int64
+	DetailsJSON    string
+	CreatedAt      time.Time
+	ResolvedAt     *time.Time
+	ActualUp       *bool
+	IsCorrect      *bool
+	RealizedReturn *float64
 }

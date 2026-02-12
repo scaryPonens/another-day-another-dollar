@@ -5,7 +5,10 @@ go 1.25.5
 require (
 	github.com/gin-gonic/gin v1.11.0
 	github.com/joho/godotenv v1.5.1
+	github.com/modelcontextprotocol/go-sdk v1.3.0
+	github.com/openai/openai-go v1.12.0
 	github.com/redis/go-redis/v9 v9.17.3
+	github.com/rmera/boo v0.0.0-20251026043359-d2fc0325de68
 	github.com/swaggo/files v1.0.1
 	github.com/swaggo/gin-swagger v1.6.1
 	github.com/swaggo/swag v1.16.6
@@ -18,14 +21,13 @@ require (
 
 require (
 	github.com/google/jsonschema-go v0.4.2 // indirect
-	github.com/modelcontextprotocol/go-sdk v1.3.0 // indirect
-	github.com/openai/openai-go v1.12.0 // indirect
 	github.com/tidwall/gjson v1.14.4 // indirect
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.1 // indirect
 	github.com/tidwall/sjson v1.2.5 // indirect
 	github.com/yosida95/uritemplate/v3 v3.0.2 // indirect
 	golang.org/x/oauth2 v0.34.0 // indirect
+	gonum.org/v1/gonum v0.16.0 // indirect
 )
 
 require (

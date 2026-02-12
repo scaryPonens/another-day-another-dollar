@@ -76,3 +76,13 @@ func TestNormalizeGenerateIntervals(t *testing.T) {
 		t.Fatalf("expected deduped intervals, got %d", len(ivs))
 	}
 }
+
+func TestNormalizeIndicatorML(t *testing.T) {
+	got, err := normalizeIndicator("ml_logreg_up4h")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if got != domain.IndicatorMLLogRegUp4H {
+		t.Fatalf("expected ml indicator, got %s", got)
+	}
+}

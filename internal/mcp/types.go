@@ -43,7 +43,7 @@ type candlesListOutput struct {
 type signalsListInput struct {
 	Symbol    string `json:"symbol,omitempty" jsonschema:"optional asset symbol (e.g. BTC, ETH)"`
 	Risk      *int   `json:"risk,omitempty" jsonschema:"optional risk level 1-5"`
-	Indicator string `json:"indicator,omitempty" jsonschema:"optional indicator: rsi, macd, bollinger, volume_zscore"`
+	Indicator string `json:"indicator,omitempty" jsonschema:"optional indicator: rsi, macd, bollinger, volume_zscore, ml_logreg_up4h, ml_xgboost_up4h, ml_ensemble_up4h"`
 	Limit     int    `json:"limit,omitempty" jsonschema:"number of signals to return, max 200"`
 }
 
@@ -112,7 +112,13 @@ func normalizeIndicator(indicator string) (string, error) {
 	}
 
 	switch indicator {
-	case domain.IndicatorRSI, domain.IndicatorMACD, domain.IndicatorBollinger, domain.IndicatorVolumeZ:
+	case domain.IndicatorRSI,
+		domain.IndicatorMACD,
+		domain.IndicatorBollinger,
+		domain.IndicatorVolumeZ,
+		domain.IndicatorMLLogRegUp4H,
+		domain.IndicatorMLXGBoostUp4H,
+		domain.IndicatorMLEnsembleUp4H:
 		return indicator, nil
 	default:
 		return "", fmt.Errorf("unsupported indicator: %s", indicator)

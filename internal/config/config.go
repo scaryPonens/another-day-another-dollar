@@ -24,6 +24,17 @@ type Config struct {
 	OpenAIAPIKey      string
 	OpenAIModel       string
 	AdvisorMaxHistory int
+
+	MLEnabled         bool
+	MLInterval        string
+	MLTargetHours     int
+	MLTrainWindowDays int
+	MLInferPollSecs   int
+	MLResolvePollSecs int
+	MLTrainHourUTC    int
+	MLLongThreshold   float64
+	MLShortThreshold  float64
+	MLMinTrainSamples int
 }
 
 func Load() *Config {
@@ -103,6 +114,69 @@ func Load() *Config {
 	if v := os.Getenv("ADVISOR_MAX_HISTORY"); v != "" {
 		if n, err := strconv.Atoi(v); err == nil && n > 0 {
 			cfg.AdvisorMaxHistory = n
+		}
+	}
+
+	cfg.MLEnabled = strings.EqualFold(strings.TrimSpace(os.Getenv("ML_ENABLED")), "true")
+
+	cfg.MLInterval = strings.TrimSpace(os.Getenv("ML_INTERVAL"))
+	if cfg.MLInterval == "" {
+		cfg.MLInterval = "1h"
+	}
+
+	cfg.MLTargetHours = 4
+	if v := strings.TrimSpace(os.Getenv("ML_TARGET_HOURS")); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 {
+			cfg.MLTargetHours = n
+		}
+	}
+
+	cfg.MLTrainWindowDays = 90
+	if v := strings.TrimSpace(os.Getenv("ML_TRAIN_WINDOW_DAYS")); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 {
+			cfg.MLTrainWindowDays = n
+		}
+	}
+
+	cfg.MLInferPollSecs = 900
+	if v := strings.TrimSpace(os.Getenv("ML_INFER_POLL_SECS")); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 {
+			cfg.MLInferPollSecs = n
+		}
+	}
+
+	cfg.MLResolvePollSecs = 1800
+	if v := strings.TrimSpace(os.Getenv("ML_RESOLVE_POLL_SECS")); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 {
+			cfg.MLResolvePollSecs = n
+		}
+	}
+
+	cfg.MLTrainHourUTC = 0
+	if v := strings.TrimSpace(os.Getenv("ML_TRAIN_HOUR_UTC")); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n >= 0 && n <= 23 {
+			cfg.MLTrainHourUTC = n
+		}
+	}
+
+	cfg.MLLongThreshold = 0.55
+	if v := strings.TrimSpace(os.Getenv("ML_LONG_THRESHOLD")); v != "" {
+		if n, err := strconv.ParseFloat(v, 64); err == nil && n > 0 && n < 1 {
+			cfg.MLLongThreshold = n
+		}
+	}
+
+	cfg.MLShortThreshold = 0.45
+	if v := strings.TrimSpace(os.Getenv("ML_SHORT_THRESHOLD")); v != "" {
+		if n, err := strconv.ParseFloat(v, 64); err == nil && n > 0 && n < 1 {
+			cfg.MLShortThreshold = n
+		}
+	}
+
+	cfg.MLMinTrainSamples = 1000
+	if v := strings.TrimSpace(os.Getenv("ML_MIN_TRAIN_SAMPLES")); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 {
+			cfg.MLMinTrainSamples = n
 		}
 	}
 
