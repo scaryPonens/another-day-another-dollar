@@ -18,6 +18,7 @@ import (
 	"bug-free-umbrella/internal/db"
 	"bug-free-umbrella/internal/handler"
 	"bug-free-umbrella/internal/job"
+	"bug-free-umbrella/internal/marketintel"
 	"bug-free-umbrella/internal/ml/ensemble"
 	"bug-free-umbrella/internal/ml/features"
 	"bug-free-umbrella/internal/ml/inference"
@@ -208,11 +209,71 @@ func main() {
 		}
 	}
 
+	var marketIntelService *service.MarketIntelService
+	if cfg.MarketIntelEnabled {
+		if db.Pool == nil {
+			log.Println("Market intel job disabled: DATABASE_URL is required")
+		} else {
+			marketIntelRepo := marketintel.NewRepository(db.Pool, tracer)
+			marketIntelScorer := marketintel.NewScorer(
+				marketintel.NewOpenAIScorer(cfg.OpenAIAPIKey, cfg.MarketIntelScoringModel),
+				cfg.MarketIntelScoringBatchSize,
+			)
+			onChainProviders := map[string]marketintel.OnChainReader{
+				"BTC": provider.NewBTCMempoolOnChainProvider(tracer, cfg.OnChainBTCMempoolBaseURL),
+				"ETH": provider.NewETHBlockscoutOnChainProvider(tracer, cfg.OnChainETHBlockscoutBaseURL),
+				"ADA": provider.NewADAKoiosOnChainProvider(tracer, cfg.OnChainADAKoiosBaseURL),
+				"XRP": provider.NewXRPScanOnChainProvider(tracer, cfg.OnChainXRPAPIBaseURL),
+			}
+			rawMarketIntelSvc := marketintel.NewService(
+				tracer,
+				marketIntelRepo,
+				marketIntelScorer,
+				signalRepo,
+				provider.NewFearGreedProvider(tracer),
+				provider.NewRedditProvider(tracer),
+				provider.NewRSSProvider(tracer),
+				onChainProviders,
+				marketintel.Config{
+					Intervals:         cfg.MarketIntelIntervals,
+					LongThreshold:     cfg.MarketIntelLongThreshold,
+					ShortThreshold:    cfg.MarketIntelShortThreshold,
+					LookbackHours1H:   cfg.MarketIntelLookbackHours1H,
+					LookbackHours4H:   cfg.MarketIntelLookbackHours4H,
+					RedditPostLimit:   cfg.MarketIntelRedditPostLimit,
+					ScoringBatchSize:  cfg.MarketIntelScoringBatchSize,
+					RetentionDays:     cfg.MarketIntelRetentionDays,
+					EnableOnChain:     cfg.MarketIntelEnableOnChain,
+					OnChainSymbols:    cfg.MarketIntelOnChainSymbols,
+					NewsFeeds:         cfg.MarketIntelNewsFeeds,
+					RedditSubs:        cfg.MarketIntelRedditSubs,
+					NewsFeedItemLimit: 40,
+				},
+			)
+			marketIntelService = service.NewMarketIntelService(tracer, rawMarketIntelSvc)
+			go job.NewMarketIntelJob(
+				tracer,
+				marketIntelService,
+				time.Duration(cfg.MarketIntelPollSecs)*time.Second,
+			).Start(ctx)
+			log.Printf(
+				"Market intel job enabled intervals=%v poll_secs=%d onchain=%v symbols=%v",
+				cfg.MarketIntelIntervals,
+				cfg.MarketIntelPollSecs,
+				cfg.MarketIntelEnableOnChain,
+				cfg.MarketIntelOnChainSymbols,
+			)
+		}
+	}
+
 	// Create handlers and routes
 	workService := newWorkServiceFunc(tracer)
 	h := newHandlerFunc(tracer, workService, priceService, signalService)
 	if mlService != nil {
 		h.SetMLTrainingRunner(mlService)
+	}
+	if marketIntelService != nil {
+		h.SetMarketIntelRunner(marketIntelService)
 	}
 
 	r := newRouterFunc()

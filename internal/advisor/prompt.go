@@ -23,7 +23,8 @@ Rules:
 - Keep responses concise and actionable. You are talking via Telegram.
 - Do not provide financial advice disclaimers on every message. The user understands this is informational.
 - When asked about an asset, summarize: current price, recent signals, and your interpretation.
-- If no signals exist for an asset, say so honestly rather than speculating.`
+- If no signals exist for an asset, say so honestly rather than speculating.
+- If fundamentals/sentiment composite signals are present, include them in your interpretation.`
 
 func BuildSystemPrompt(marketContext string) string {
 	var sb strings.Builder

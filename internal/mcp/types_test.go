@@ -85,4 +85,12 @@ func TestNormalizeIndicatorML(t *testing.T) {
 	if got != domain.IndicatorMLLogRegUp4H {
 		t.Fatalf("expected ml indicator, got %s", got)
 	}
+
+	got, err = normalizeIndicator("fund_sentiment_composite")
+	if err != nil {
+		t.Fatalf("unexpected error for phase7 indicator: %v", err)
+	}
+	if got != domain.IndicatorFundSentimentComposite {
+		t.Fatalf("expected phase7 indicator, got %s", got)
+	}
 }

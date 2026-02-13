@@ -43,6 +43,26 @@ type Config struct {
 	MLAnomalyDampMax float64
 	MLIForestTrees   int
 	MLIForestSample  int
+
+	MarketIntelEnabled          bool
+	MarketIntelIntervals        []string
+	MarketIntelPollSecs         int
+	MarketIntelLongThreshold    float64
+	MarketIntelShortThreshold   float64
+	MarketIntelLookbackHours1H  int
+	MarketIntelLookbackHours4H  int
+	MarketIntelNewsFeeds        []string
+	MarketIntelRedditSubs       []string
+	MarketIntelRedditPostLimit  int
+	MarketIntelScoringModel     string
+	MarketIntelScoringBatchSize int
+	MarketIntelRetentionDays    int
+	MarketIntelEnableOnChain    bool
+	MarketIntelOnChainSymbols   []string
+	OnChainBTCMempoolBaseURL    string
+	OnChainETHBlockscoutBaseURL string
+	OnChainADAKoiosBaseURL      string
+	OnChainXRPAPIBaseURL        string
 }
 
 func Load() *Config {
@@ -226,20 +246,153 @@ func Load() *Config {
 		}
 	}
 
+	cfg.MarketIntelEnabled = strings.EqualFold(strings.TrimSpace(os.Getenv("MARKET_INTEL_ENABLED")), "true")
+	cfg.MarketIntelIntervals = parseIntervalList(strings.TrimSpace(os.Getenv("MARKET_INTEL_INTERVALS")), []string{"1h", "4h"})
+
+	cfg.MarketIntelPollSecs = 900
+	if v := strings.TrimSpace(os.Getenv("MARKET_INTEL_POLL_SECS")); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 {
+			cfg.MarketIntelPollSecs = n
+		}
+	}
+
+	cfg.MarketIntelLongThreshold = 0.20
+	if v := strings.TrimSpace(os.Getenv("MARKET_INTEL_LONG_THRESHOLD")); v != "" {
+		if n, err := strconv.ParseFloat(v, 64); err == nil && n > -1 && n < 1 {
+			cfg.MarketIntelLongThreshold = n
+		}
+	}
+
+	cfg.MarketIntelShortThreshold = -0.20
+	if v := strings.TrimSpace(os.Getenv("MARKET_INTEL_SHORT_THRESHOLD")); v != "" {
+		if n, err := strconv.ParseFloat(v, 64); err == nil && n > -1 && n < 1 {
+			cfg.MarketIntelShortThreshold = n
+		}
+	}
+	if cfg.MarketIntelShortThreshold > cfg.MarketIntelLongThreshold {
+		cfg.MarketIntelShortThreshold = -0.20
+		cfg.MarketIntelLongThreshold = 0.20
+	}
+
+	cfg.MarketIntelLookbackHours1H = 12
+	if v := strings.TrimSpace(os.Getenv("MARKET_INTEL_LOOKBACK_HOURS_1H")); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 {
+			cfg.MarketIntelLookbackHours1H = n
+		}
+	}
+
+	cfg.MarketIntelLookbackHours4H = 24
+	if v := strings.TrimSpace(os.Getenv("MARKET_INTEL_LOOKBACK_HOURS_4H")); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 {
+			cfg.MarketIntelLookbackHours4H = n
+		}
+	}
+
+	cfg.MarketIntelNewsFeeds = parseCSVWithDefault(
+		os.Getenv("MARKET_INTEL_NEWS_FEEDS"),
+		[]string{
+			"https://www.coindesk.com/arc/outboundfeeds/rss/",
+			"https://cointelegraph.com/rss",
+		},
+	)
+	cfg.MarketIntelRedditSubs = parseCSVWithDefault(
+		os.Getenv("MARKET_INTEL_REDDIT_SUBS"),
+		[]string{"CryptoCurrency", "Bitcoin", "Ethereum", "Cardano", "Ripple"},
+	)
+
+	cfg.MarketIntelRedditPostLimit = 40
+	if v := strings.TrimSpace(os.Getenv("MARKET_INTEL_REDDIT_POST_LIMIT")); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 {
+			cfg.MarketIntelRedditPostLimit = n
+		}
+	}
+
+	cfg.MarketIntelScoringModel = strings.TrimSpace(os.Getenv("MARKET_INTEL_SCORING_MODEL"))
+	if cfg.MarketIntelScoringModel == "" {
+		cfg.MarketIntelScoringModel = cfg.OpenAIModel
+	}
+	if cfg.MarketIntelScoringModel == "" {
+		cfg.MarketIntelScoringModel = "gpt-4o-mini"
+	}
+
+	cfg.MarketIntelScoringBatchSize = 24
+	if v := strings.TrimSpace(os.Getenv("MARKET_INTEL_SCORING_BATCH_SIZE")); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 {
+			cfg.MarketIntelScoringBatchSize = n
+		}
+	}
+
+	cfg.MarketIntelRetentionDays = 90
+	if v := strings.TrimSpace(os.Getenv("MARKET_INTEL_RETENTION_DAYS")); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 {
+			cfg.MarketIntelRetentionDays = n
+		}
+	}
+
+	cfg.MarketIntelEnableOnChain = true
+	if v := strings.TrimSpace(os.Getenv("MARKET_INTEL_ENABLE_ONCHAIN")); v != "" {
+		if strings.EqualFold(v, "true") {
+			cfg.MarketIntelEnableOnChain = true
+		} else if strings.EqualFold(v, "false") {
+			cfg.MarketIntelEnableOnChain = false
+		}
+	}
+
+	cfg.MarketIntelOnChainSymbols = parseSymbolListWithDefault(
+		os.Getenv("MARKET_INTEL_ONCHAIN_SYMBOLS"),
+		[]string{"BTC", "ETH", "ADA", "XRP"},
+	)
+
+	cfg.OnChainBTCMempoolBaseURL = strings.TrimSpace(os.Getenv("ONCHAIN_BTC_MEMPOOL_BASE_URL"))
+	if cfg.OnChainBTCMempoolBaseURL == "" {
+		cfg.OnChainBTCMempoolBaseURL = "https://mempool.space"
+	}
+	cfg.OnChainETHBlockscoutBaseURL = strings.TrimSpace(os.Getenv("ONCHAIN_ETH_BLOCKSCOUT_BASE_URL"))
+	if cfg.OnChainETHBlockscoutBaseURL == "" {
+		cfg.OnChainETHBlockscoutBaseURL = "https://eth.blockscout.com"
+	}
+	cfg.OnChainADAKoiosBaseURL = strings.TrimSpace(os.Getenv("ONCHAIN_ADA_KOIOS_BASE_URL"))
+	if cfg.OnChainADAKoiosBaseURL == "" {
+		cfg.OnChainADAKoiosBaseURL = "https://api.koios.rest"
+	}
+	cfg.OnChainXRPAPIBaseURL = strings.TrimSpace(os.Getenv("ONCHAIN_XRP_API_BASE_URL"))
+	if cfg.OnChainXRPAPIBaseURL == "" {
+		cfg.OnChainXRPAPIBaseURL = "https://api.xrpscan.com"
+	}
+
 	return cfg
 }
 
 func parseMLIntervals(raw string, fallback string) []string {
-	if fallback == "" {
-		fallback = "1h"
-	}
-	if strings.TrimSpace(raw) == "" {
-		return []string{fallback}
+	return parseIntervalList(raw, []string{fallback})
+}
+
+func parseIntervalList(raw string, fallback []string) []string {
+	if len(fallback) == 0 {
+		fallback = []string{"1h"}
 	}
 
 	supported := make(map[string]struct{}, len(domain.SupportedIntervals))
 	for _, interval := range domain.SupportedIntervals {
 		supported[interval] = struct{}{}
+	}
+
+	if strings.TrimSpace(raw) == "" {
+		cleanFallback := make([]string, 0, len(fallback))
+		for _, interval := range fallback {
+			interval = strings.TrimSpace(interval)
+			if interval == "" {
+				continue
+			}
+			if _, ok := supported[interval]; !ok {
+				continue
+			}
+			cleanFallback = append(cleanFallback, interval)
+		}
+		if len(cleanFallback) == 0 {
+			return []string{"1h"}
+		}
+		return cleanFallback
 	}
 
 	parts := strings.Split(raw, ",")
@@ -260,7 +413,60 @@ func parseMLIntervals(raw string, fallback string) []string {
 		out = append(out, interval)
 	}
 	if len(out) == 0 {
-		return []string{fallback}
+		return parseIntervalList("", fallback)
+	}
+	return out
+}
+
+func parseCSVWithDefault(raw string, fallback []string) []string {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return append([]string(nil), fallback...)
+	}
+	parts := strings.Split(raw, ",")
+	out := make([]string, 0, len(parts))
+	seen := make(map[string]struct{}, len(parts))
+	for _, part := range parts {
+		val := strings.TrimSpace(part)
+		if val == "" {
+			continue
+		}
+		if _, ok := seen[val]; ok {
+			continue
+		}
+		seen[val] = struct{}{}
+		out = append(out, val)
+	}
+	if len(out) == 0 {
+		return append([]string(nil), fallback...)
+	}
+	return out
+}
+
+func parseSymbolListWithDefault(raw string, fallback []string) []string {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return append([]string(nil), fallback...)
+	}
+	parts := strings.Split(raw, ",")
+	out := make([]string, 0, len(parts))
+	seen := make(map[string]struct{}, len(parts))
+	for _, part := range parts {
+		symbol := strings.ToUpper(strings.TrimSpace(part))
+		if symbol == "" {
+			continue
+		}
+		if _, ok := domain.CoinGeckoID[symbol]; !ok {
+			continue
+		}
+		if _, ok := seen[symbol]; ok {
+			continue
+		}
+		seen[symbol] = struct{}{}
+		out = append(out, symbol)
+	}
+	if len(out) == 0 {
+		return append([]string(nil), fallback...)
 	}
 	return out
 }

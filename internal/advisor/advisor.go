@@ -133,6 +133,14 @@ func (s *AdvisorService) gatherContext(ctx context.Context, symbols []string) (s
 			if err == nil {
 				signals = append(signals, sigs...)
 			}
+			composite, err := s.signals.ListSignals(ctx, domain.SignalFilter{
+				Symbol:    sym,
+				Indicator: domain.IndicatorFundSentimentComposite,
+				Limit:     3,
+			})
+			if err == nil {
+				signals = append(signals, composite...)
+			}
 		}
 	} else {
 		var err error
@@ -141,8 +149,16 @@ func (s *AdvisorService) gatherContext(ctx context.Context, symbols []string) (s
 			return "", err
 		}
 		signals, _ = s.signals.ListSignals(ctx, domain.SignalFilter{Limit: 10})
+		composite, err := s.signals.ListSignals(ctx, domain.SignalFilter{
+			Indicator: domain.IndicatorFundSentimentComposite,
+			Limit:     10,
+		})
+		if err == nil {
+			signals = append(signals, composite...)
+		}
 	}
 
+	signals = uniqueSignals(signals)
 	return FormatMarketContext(prices, signals), nil
 }
 
@@ -193,6 +209,31 @@ func (s *AdvisorService) callLLM(
 	reply := completion.Choices[0].Message.Content
 	span.SetAttributes(attribute.Int("llm.reply_length", len(reply)))
 	return reply, nil
+}
+
+func uniqueSignals(in []domain.Signal) []domain.Signal {
+	if len(in) <= 1 {
+		return in
+	}
+	out := make([]domain.Signal, 0, len(in))
+	seen := make(map[string]struct{}, len(in))
+	for _, sig := range in {
+		key := fmt.Sprintf(
+			"%d|%s|%s|%s|%s|%d",
+			sig.ID,
+			sig.Symbol,
+			sig.Interval,
+			sig.Indicator,
+			sig.Direction,
+			sig.Timestamp.UTC().Unix(),
+		)
+		if _, ok := seen[key]; ok {
+			continue
+		}
+		seen[key] = struct{}{}
+		out = append(out, sig)
+	}
+	return out
 }
 
 // openaiClient wraps the official SDK's chat completions service.

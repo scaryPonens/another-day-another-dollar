@@ -33,6 +33,25 @@ func TestLoadDefaults(t *testing.T) {
 	t.Setenv("ML_ANOMALY_DAMP_MAX", "")
 	t.Setenv("ML_IFOREST_TREES", "")
 	t.Setenv("ML_IFOREST_SAMPLE_SIZE", "")
+	t.Setenv("MARKET_INTEL_ENABLED", "")
+	t.Setenv("MARKET_INTEL_INTERVALS", "")
+	t.Setenv("MARKET_INTEL_POLL_SECS", "")
+	t.Setenv("MARKET_INTEL_LONG_THRESHOLD", "")
+	t.Setenv("MARKET_INTEL_SHORT_THRESHOLD", "")
+	t.Setenv("MARKET_INTEL_LOOKBACK_HOURS_1H", "")
+	t.Setenv("MARKET_INTEL_LOOKBACK_HOURS_4H", "")
+	t.Setenv("MARKET_INTEL_NEWS_FEEDS", "")
+	t.Setenv("MARKET_INTEL_REDDIT_SUBS", "")
+	t.Setenv("MARKET_INTEL_REDDIT_POST_LIMIT", "")
+	t.Setenv("MARKET_INTEL_SCORING_MODEL", "")
+	t.Setenv("MARKET_INTEL_SCORING_BATCH_SIZE", "")
+	t.Setenv("MARKET_INTEL_RETENTION_DAYS", "")
+	t.Setenv("MARKET_INTEL_ENABLE_ONCHAIN", "")
+	t.Setenv("MARKET_INTEL_ONCHAIN_SYMBOLS", "")
+	t.Setenv("ONCHAIN_BTC_MEMPOOL_BASE_URL", "")
+	t.Setenv("ONCHAIN_ETH_BLOCKSCOUT_BASE_URL", "")
+	t.Setenv("ONCHAIN_ADA_KOIOS_BASE_URL", "")
+	t.Setenv("ONCHAIN_XRP_API_BASE_URL", "")
 
 	cfg := Load()
 	if cfg.RedisURL != "localhost:6379" {
@@ -68,6 +87,27 @@ func TestLoadDefaults(t *testing.T) {
 	if cfg.MLIForestTrees != 200 || cfg.MLIForestSample != 256 {
 		t.Fatalf("unexpected ML iforest defaults: %+v", cfg)
 	}
+	if cfg.MarketIntelEnabled {
+		t.Fatalf("expected market intel disabled by default")
+	}
+	if !reflect.DeepEqual(cfg.MarketIntelIntervals, []string{"1h", "4h"}) {
+		t.Fatalf("unexpected market intel intervals default: %+v", cfg.MarketIntelIntervals)
+	}
+	if cfg.MarketIntelPollSecs != 900 || cfg.MarketIntelLongThreshold != 0.20 || cfg.MarketIntelShortThreshold != -0.20 {
+		t.Fatalf("unexpected market intel threshold defaults: %+v", cfg)
+	}
+	if cfg.MarketIntelLookbackHours1H != 12 || cfg.MarketIntelLookbackHours4H != 24 {
+		t.Fatalf("unexpected market intel lookback defaults: %+v", cfg)
+	}
+	if cfg.MarketIntelRedditPostLimit != 40 || cfg.MarketIntelScoringBatchSize != 24 || cfg.MarketIntelRetentionDays != 90 {
+		t.Fatalf("unexpected market intel numeric defaults: %+v", cfg)
+	}
+	if !cfg.MarketIntelEnableOnChain || !reflect.DeepEqual(cfg.MarketIntelOnChainSymbols, []string{"BTC", "ETH", "ADA", "XRP"}) {
+		t.Fatalf("unexpected market intel onchain defaults: %+v", cfg)
+	}
+	if cfg.OnChainBTCMempoolBaseURL == "" || cfg.OnChainETHBlockscoutBaseURL == "" || cfg.OnChainADAKoiosBaseURL == "" || cfg.OnChainXRPAPIBaseURL == "" {
+		t.Fatalf("expected onchain base urls to have defaults: %+v", cfg)
+	}
 }
 
 func TestLoadWithEnv(t *testing.T) {
@@ -98,6 +138,25 @@ func TestLoadWithEnv(t *testing.T) {
 	t.Setenv("ML_ANOMALY_DAMP_MAX", "0.50")
 	t.Setenv("ML_IFOREST_TREES", "111")
 	t.Setenv("ML_IFOREST_SAMPLE_SIZE", "333")
+	t.Setenv("MARKET_INTEL_ENABLED", "true")
+	t.Setenv("MARKET_INTEL_INTERVALS", "1h,4h,invalid,1h")
+	t.Setenv("MARKET_INTEL_POLL_SECS", "600")
+	t.Setenv("MARKET_INTEL_LONG_THRESHOLD", "0.25")
+	t.Setenv("MARKET_INTEL_SHORT_THRESHOLD", "-0.35")
+	t.Setenv("MARKET_INTEL_LOOKBACK_HOURS_1H", "10")
+	t.Setenv("MARKET_INTEL_LOOKBACK_HOURS_4H", "20")
+	t.Setenv("MARKET_INTEL_NEWS_FEEDS", "https://a.example/rss,https://b.example/rss")
+	t.Setenv("MARKET_INTEL_REDDIT_SUBS", "CryptoCurrency,Bitcoin")
+	t.Setenv("MARKET_INTEL_REDDIT_POST_LIMIT", "15")
+	t.Setenv("MARKET_INTEL_SCORING_MODEL", "gpt-4o-mini")
+	t.Setenv("MARKET_INTEL_SCORING_BATCH_SIZE", "12")
+	t.Setenv("MARKET_INTEL_RETENTION_DAYS", "30")
+	t.Setenv("MARKET_INTEL_ENABLE_ONCHAIN", "false")
+	t.Setenv("MARKET_INTEL_ONCHAIN_SYMBOLS", "btc,eth,invalid")
+	t.Setenv("ONCHAIN_BTC_MEMPOOL_BASE_URL", "https://mempool.custom")
+	t.Setenv("ONCHAIN_ETH_BLOCKSCOUT_BASE_URL", "https://eth.custom")
+	t.Setenv("ONCHAIN_ADA_KOIOS_BASE_URL", "https://koios.custom")
+	t.Setenv("ONCHAIN_XRP_API_BASE_URL", "https://xrp.custom")
 
 	cfg := Load()
 	if cfg.TelegramBotToken != "token" || cfg.DatabaseURL != "postgres://example" || cfg.RedisURL != "redis:6379" {
@@ -130,6 +189,36 @@ func TestLoadWithEnv(t *testing.T) {
 	if cfg.MLIForestTrees != 111 || cfg.MLIForestSample != 333 {
 		t.Fatalf("unexpected ML iforest env values: %+v", cfg)
 	}
+	if !cfg.MarketIntelEnabled || cfg.MarketIntelPollSecs != 600 {
+		t.Fatalf("unexpected market intel enabled/poll env values: %+v", cfg)
+	}
+	if !reflect.DeepEqual(cfg.MarketIntelIntervals, []string{"1h", "4h"}) {
+		t.Fatalf("unexpected market intel intervals env values: %+v", cfg.MarketIntelIntervals)
+	}
+	if cfg.MarketIntelLongThreshold != 0.25 || cfg.MarketIntelShortThreshold != -0.35 {
+		t.Fatalf("unexpected market intel threshold env values: %+v", cfg)
+	}
+	if cfg.MarketIntelLookbackHours1H != 10 || cfg.MarketIntelLookbackHours4H != 20 {
+		t.Fatalf("unexpected market intel lookback env values: %+v", cfg)
+	}
+	if !reflect.DeepEqual(cfg.MarketIntelNewsFeeds, []string{"https://a.example/rss", "https://b.example/rss"}) {
+		t.Fatalf("unexpected market intel news feeds: %+v", cfg.MarketIntelNewsFeeds)
+	}
+	if !reflect.DeepEqual(cfg.MarketIntelRedditSubs, []string{"CryptoCurrency", "Bitcoin"}) {
+		t.Fatalf("unexpected market intel reddit subs: %+v", cfg.MarketIntelRedditSubs)
+	}
+	if cfg.MarketIntelRedditPostLimit != 15 || cfg.MarketIntelScoringBatchSize != 12 || cfg.MarketIntelRetentionDays != 30 {
+		t.Fatalf("unexpected market intel numeric env values: %+v", cfg)
+	}
+	if cfg.MarketIntelEnableOnChain || !reflect.DeepEqual(cfg.MarketIntelOnChainSymbols, []string{"BTC", "ETH"}) {
+		t.Fatalf("unexpected market intel onchain env values: %+v", cfg)
+	}
+	if cfg.OnChainBTCMempoolBaseURL != "https://mempool.custom" ||
+		cfg.OnChainETHBlockscoutBaseURL != "https://eth.custom" ||
+		cfg.OnChainADAKoiosBaseURL != "https://koios.custom" ||
+		cfg.OnChainXRPAPIBaseURL != "https://xrp.custom" {
+		t.Fatalf("unexpected onchain base url env values: %+v", cfg)
+	}
 
 	t.Setenv("COINGECKO_POLL_SECS", "bad")
 	t.Setenv("MCP_HTTP_PORT", "bad")
@@ -149,6 +238,17 @@ func TestLoadWithEnv(t *testing.T) {
 	t.Setenv("ML_ANOMALY_DAMP_MAX", "bad")
 	t.Setenv("ML_IFOREST_TREES", "bad")
 	t.Setenv("ML_IFOREST_SAMPLE_SIZE", "bad")
+	t.Setenv("MARKET_INTEL_INTERVALS", "bad")
+	t.Setenv("MARKET_INTEL_POLL_SECS", "bad")
+	t.Setenv("MARKET_INTEL_LONG_THRESHOLD", "bad")
+	t.Setenv("MARKET_INTEL_SHORT_THRESHOLD", "bad")
+	t.Setenv("MARKET_INTEL_LOOKBACK_HOURS_1H", "bad")
+	t.Setenv("MARKET_INTEL_LOOKBACK_HOURS_4H", "bad")
+	t.Setenv("MARKET_INTEL_REDDIT_POST_LIMIT", "bad")
+	t.Setenv("MARKET_INTEL_SCORING_BATCH_SIZE", "bad")
+	t.Setenv("MARKET_INTEL_RETENTION_DAYS", "bad")
+	t.Setenv("MARKET_INTEL_ENABLE_ONCHAIN", "bad")
+	t.Setenv("MARKET_INTEL_ONCHAIN_SYMBOLS", "notasymbol")
 	cfg = Load()
 	if cfg.CoinGeckoPollSecs != 60 {
 		t.Fatalf("invalid poll secs should fall back to default, got %d", cfg.CoinGeckoPollSecs)
@@ -167,5 +267,20 @@ func TestLoadWithEnv(t *testing.T) {
 	}
 	if !cfg.MLEnableIForest || cfg.MLAnomalyThresh != 0.62 || cfg.MLAnomalyDampMax != 0.65 || cfg.MLIForestTrees != 200 || cfg.MLIForestSample != 256 {
 		t.Fatalf("invalid ML anomaly values should fall back to defaults: %+v", cfg)
+	}
+	if !reflect.DeepEqual(cfg.MarketIntelIntervals, []string{"1h", "4h"}) {
+		t.Fatalf("invalid market intel intervals should fall back to defaults: %+v", cfg.MarketIntelIntervals)
+	}
+	if cfg.MarketIntelPollSecs != 900 || cfg.MarketIntelLongThreshold != 0.20 || cfg.MarketIntelShortThreshold != -0.20 {
+		t.Fatalf("invalid market intel thresholds should fall back to defaults: %+v", cfg)
+	}
+	if cfg.MarketIntelLookbackHours1H != 12 || cfg.MarketIntelLookbackHours4H != 24 {
+		t.Fatalf("invalid market intel lookbacks should fall back to defaults: %+v", cfg)
+	}
+	if cfg.MarketIntelRedditPostLimit != 40 || cfg.MarketIntelScoringBatchSize != 24 || cfg.MarketIntelRetentionDays != 90 {
+		t.Fatalf("invalid market intel numeric values should fall back to defaults: %+v", cfg)
+	}
+	if !cfg.MarketIntelEnableOnChain || !reflect.DeepEqual(cfg.MarketIntelOnChainSymbols, []string{"BTC", "ETH", "ADA", "XRP"}) {
+		t.Fatalf("invalid market intel onchain values should fall back to defaults: %+v", cfg)
 	}
 }

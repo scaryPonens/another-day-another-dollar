@@ -11,6 +11,7 @@ Go-based crypto trading advisor bot. Tracks live crypto prices, stores OHLCV can
 - OHLCV candle storage in Postgres (5m, 15m, 1h, 4h, 1d intervals)
 - Redis cache-aside for latest prices
 - Background polling with rate-limited CoinGecko API calls
+- Fundamentals/sentiment composite signals (`fund_sentiment_composite`) on `1h` and `4h`
 - Telegram bot (`/ping`, `/price`, `/volume`, `/signals`, `/alerts`)
 - MCP service (`stdio` + streamable HTTP transport) with tools/resources for prices, candles, and signals
 - Signal chart imaging (candlestick + triggering indicator) stored in Postgres and served to Telegram/API/MCP
@@ -43,6 +44,7 @@ internal/repository/   Postgres persistence (candle repository, migrations)
 internal/signal/       Pure technical-analysis signal engine (RSI/MACD/Bollinger/Volume)
 internal/service/      Business logic (price service, signal service, work service)
 internal/mcp/          MCP tools/resources, transport auth, and middleware
+internal/marketintel/  Fundamentals/sentiment ingestion, scoring, and composite signal logic
 pkg/tracing/           OpenTelemetry initialization
 docs/                  Generated Swagger spec (do not edit manually)
 ```
@@ -122,6 +124,7 @@ MCP_RATE_LIMIT_PER_MIN=60
 | GET    | /api/signals          | Technical signals (`?symbol=BTC&risk=3&limit=50`) |
 | GET    | /api/signals/:id/image | Signal chart image (`image/png`)                  |
 | POST   | /api/ml/train         | Manually trigger ML training cycle (when ML is enabled) |
+| POST   | /api/market-intel/run | Manually trigger one fundamentals/sentiment cycle |
 
 Supported candle intervals: `5m`, `15m`, `1h`, `4h`, `1d`. Default limit is 100 (max 500).
 
@@ -165,6 +168,12 @@ Signal image maintenance runs alongside polling:
 - Retry failed signal renders every 5 minutes (bounded retries)
 - Delete expired signal images every hour
 - Image retention window: 24 hours
+
+Market-intel polling (Phase 7):
+- Ingests Fear & Greed + RSS news + Reddit and scores sentiment
+- Collects on-chain proxy snapshots for BTC/ETH/ADA/XRP
+- Writes composite snapshots every poll cycle for `1h` and `4h`
+- Emits directional `fund_sentiment_composite` rows into `signals` (`long`/`short` only)
 
 ## MCP Service
 
@@ -313,6 +322,38 @@ Practical usage:
 - Read signal `details`:
   - includes `model_key=ensemble_v1`, `prob_up`, `confidence`, `target=4h`, `ensemble_score`
   - when anomaly is active, it also includes `anomaly_score` and `damp_factor`
+
+## Fundamentals + Sentiment (Phase 7)
+
+Phase 7 adds a non-price composite indicator:
+- `indicator=fund_sentiment_composite`
+- Intervals: `1h`, `4h`
+- Inputs:
+  - Fear & Greed index (Alternative.me)
+  - RSS news headlines
+  - Reddit posts
+  - Free on-chain proxy metrics:
+    - BTC: mempool.space
+    - ETH: Blockscout
+    - ADA: Koios
+    - XRP: XRPSCAN
+
+Scoring behavior:
+- News/Reddit are scored by LLM when available, with deterministic heuristic fallback.
+- Components are weighted and renormalized when data is missing.
+- `signals` rows are created only for `long`/`short`; `hold` remains internal in `market_composite_snapshots`.
+
+Operational usage:
+- Manual run: `POST /api/market-intel/run`
+- Query composite signals:
+  - `GET /api/signals?indicator=fund_sentiment_composite&limit=50`
+  - `GET /api/signals?symbol=BTC&indicator=fund_sentiment_composite`
+- Example `details` format:
+  - `model_key=fund_sent_v1;interval=1h;score=0.2431;confidence=0.5810;fng=-0.1200;news=0.4100;reddit=0.2100;onchain=0.0900`
+
+Chart behavior:
+- Phase 7 signals are text-only.
+- `fund_sentiment_composite` does not render signal chart images in this phase.
 
 
 ## Regenerating Swagger Docs

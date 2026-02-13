@@ -8,11 +8,12 @@ import (
 )
 
 type Handler struct {
-	tracer        trace.Tracer
-	workService   *service.WorkService
-	priceService  *service.PriceService
-	signalService *service.SignalService
-	mlTrainer     MLTrainingRunner
+	tracer            trace.Tracer
+	workService       *service.WorkService
+	priceService      *service.PriceService
+	signalService     *service.SignalService
+	mlTrainer         MLTrainingRunner
+	marketIntelRunner MarketIntelRunner
 }
 
 func New(
@@ -33,6 +34,10 @@ func (h *Handler) SetMLTrainingRunner(runner MLTrainingRunner) {
 	h.mlTrainer = runner
 }
 
+func (h *Handler) SetMarketIntelRunner(runner MarketIntelRunner) {
+	h.marketIntelRunner = runner
+}
+
 func (h *Handler) RegisterRoutes(r *gin.Engine) {
 	r.GET("/health", h.Health)
 	r.GET("/api/prices", h.GetAllPrices)
@@ -41,4 +46,5 @@ func (h *Handler) RegisterRoutes(r *gin.Engine) {
 	r.GET("/api/signals", h.GetSignals)
 	r.GET("/api/signals/:id/image", h.GetSignalImage)
 	r.POST("/api/ml/train", h.TriggerMLTraining)
+	r.POST("/api/market-intel/run", h.TriggerMarketIntelRun)
 }

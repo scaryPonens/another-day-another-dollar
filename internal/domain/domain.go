@@ -16,13 +16,14 @@ const (
 )
 
 const (
-	IndicatorRSI            = "rsi"
-	IndicatorMACD           = "macd"
-	IndicatorBollinger      = "bollinger"
-	IndicatorVolumeZ        = "volume_zscore"
-	IndicatorMLLogRegUp4H   = "ml_logreg_up4h"
-	IndicatorMLXGBoostUp4H  = "ml_xgboost_up4h"
-	IndicatorMLEnsembleUp4H = "ml_ensemble_up4h"
+	IndicatorRSI                    = "rsi"
+	IndicatorMACD                   = "macd"
+	IndicatorBollinger              = "bollinger"
+	IndicatorVolumeZ                = "volume_zscore"
+	IndicatorMLLogRegUp4H           = "ml_logreg_up4h"
+	IndicatorMLXGBoostUp4H          = "ml_xgboost_up4h"
+	IndicatorMLEnsembleUp4H         = "ml_ensemble_up4h"
+	IndicatorFundSentimentComposite = "fund_sentiment_composite"
 )
 
 type Signal struct {
@@ -140,4 +141,66 @@ type MLPrediction struct {
 	ActualUp       *bool
 	IsCorrect      *bool
 	RealizedReturn *float64
+}
+
+type MarketIntelItem struct {
+	ID                  int64
+	Source              string
+	SourceItemID        string
+	Title               string
+	URL                 string
+	Excerpt             string
+	Author              string
+	PublishedAt         time.Time
+	FetchedAt           time.Time
+	MetadataJSON        string
+	SentimentScore      *float64
+	SentimentConfidence *float64
+	SentimentLabel      *string
+	SentimentModel      *string
+	SentimentReason     *string
+	ScoredAt            *time.Time
+	CreatedAt           time.Time
+	UpdatedAt           time.Time
+	Symbols             []string
+}
+
+type MarketOnChainSnapshot struct {
+	Symbol       string
+	Interval     string
+	BucketTime   time.Time
+	ProviderKey  string
+	OnChainScore float64
+	Confidence   float64
+	DetailsJSON  string
+	CreatedAt    time.Time
+}
+
+type MarketCompositeSnapshot struct {
+	Symbol               string
+	Interval             string
+	OpenTime             time.Time
+	FearGreedValue       *int
+	FearGreedScore       *float64
+	NewsScore            *float64
+	RedditScore          *float64
+	OnChainScore         *float64
+	CompositeScore       float64
+	Confidence           float64
+	Direction            SignalDirection
+	Risk                 RiskLevel
+	ComponentWeightsJSON string
+	DetailsJSON          string
+	SignalID             *int64
+	CreatedAt            time.Time
+	UpdatedAt            time.Time
+}
+
+type MarketIntelRunResult struct {
+	ItemsIngested     int      `json:"items_ingested"`
+	ItemsScored       int      `json:"items_scored"`
+	OnChainSnapshots  int      `json:"onchain_snapshots"`
+	CompositesWritten int      `json:"composites_written"`
+	SignalsWritten    int      `json:"signals_written"`
+	Errors            []string `json:"errors,omitempty"`
 }

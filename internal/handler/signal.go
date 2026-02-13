@@ -18,7 +18,7 @@ import (
 // @Produce      json
 // @Param        symbol     query  string  false  "Asset symbol (e.g., BTC, ETH)"
 // @Param        risk       query  int     false  "Risk level (1-5)"
-// @Param        indicator  query  string  false  "Indicator key (rsi, macd, bollinger, volume_zscore, ml_logreg_up4h, ml_xgboost_up4h, ml_ensemble_up4h)"
+// @Param        indicator  query  string  false  "Indicator key (rsi, macd, bollinger, volume_zscore, ml_logreg_up4h, ml_xgboost_up4h, ml_ensemble_up4h, fund_sentiment_composite)"
 // @Param        limit      query  int     false  "Number of signals (default 50, max 200)"  default(50)
 // @Success      200  {object}  map[string]interface{}
 // @Failure      400  {object}  map[string]string

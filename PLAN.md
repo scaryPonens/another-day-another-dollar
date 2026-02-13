@@ -233,18 +233,54 @@ Phase 6 development is **complete in-repo** (Go-native implementation finished).
 
 ---
 
-## Phase 7: Fundamentals & Sentiment
+## Phase 7: Fundamentals & Sentiment ✅ **(Completed)**
 
-**Goal:** Non-price signals.
+**Goal:** Add non-price market intelligence signals without introducing paid on-chain dependencies.
 
-- **On-chain fundamentals** (for crypto): whale wallet movements, exchange inflows/outflows via Glassnode or free alternatives
-- **Sentiment analysis**: scrape/poll crypto Twitter (via API), Reddit (pushshift), Fear & Greed Index
-  - LLM-based sentiment scoring on headlines/posts (batch job)
-  - Store sentiment scores as another signal type
-- **Fundamentals for tradfi crypto exposure** (COIN, MARA, etc.): earnings, P/E, sector rotation signals from Alpha Vantage
-- Feed all of these into the advisor LLM context window
+**Status:**
+Phase 7 is complete with a Go-native implementation in this repo.
 
-**Deliverable:** Bot says things like "BTC RSI is neutral but on-chain shows massive exchange outflows and sentiment is shifting bullish — risk 3 long."
+Implemented scope:
+- New migration `000006_create_market_intel_phase7` with:
+  - `market_intel_items`
+  - `market_intel_item_symbols`
+  - `market_onchain_snapshots`
+  - `market_composite_snapshots`
+- Composite fundamentals/sentiment indicator:
+  - `fund_sentiment_composite`
+  - emitted on `1h` and `4h`
+  - persisted to existing `signals` surfaces (`/api/signals`, Telegram `/signals`, MCP `signals_list`)
+- Sentiment ingestion and scoring pipeline:
+  - Fear & Greed ingestion (Alternative.me)
+  - RSS news ingestion
+  - Reddit ingestion
+  - LLM scoring with deterministic heuristic fallback
+- Free chain-specific on-chain proxy adapters (no Glassnode):
+  - BTC: mempool.space
+  - ETH: Blockscout
+  - ADA: Koios
+  - XRP: XRPSCAN
+- Composite scoring logic:
+  - weighted component aggregation with renormalization when components are missing
+  - directional thresholds for `long`/`short`
+  - `hold` retained only in `market_composite_snapshots` (no `signals` row)
+- Job + manual trigger:
+  - scheduled market-intel background job
+  - `POST /api/market-intel/run` manual run endpoint
+- Advisor context update:
+  - advisor now explicitly includes fundamentals/sentiment composite signals when available
+
+Compatibility behavior:
+- Classic and ML signal engines remain unchanged.
+- Phase 7 signals are text-only in this phase (no chart image rendering).
+- Existing API/Telegram/MCP signal interfaces remain backward compatible.
+
+**Post-completion rollout checklist (ops/environment):**
+- Run `./migrate up` to apply `000006`.
+- Deploy with `MARKET_INTEL_ENABLED=false`.
+- Trigger `POST /api/market-intel/run` and verify new tables + `fund_sentiment_composite` signal rows.
+- Enable `MARKET_INTEL_ENABLED=true`.
+- Monitor run warnings (`errors` array from manual trigger) plus composite signal distribution by interval/symbol.
 
 ---
 
