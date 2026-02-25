@@ -33,6 +33,4 @@ go.work.sum
 .ssh
 server
 ssh
-post0.md
-post1.md
-post2.md
+post*.md

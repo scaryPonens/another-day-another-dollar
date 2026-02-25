@@ -4,7 +4,7 @@
 
 ---
 
-### **Post 1: The Foundation - A Go-Powered Crypto Bot**
+### **Post 1: The Foundation - A Go-Powered Crypto Bot** ✅ **(Written — `post1.md`)**
 
 *   **Core Idea:** Introduce the project's goal and the foundational technology choices.
 *   **Key Talking Points:**
@@ -15,7 +15,7 @@
 
 ---
 
-### **Post 2: Spec-Driven Development - Building with an AI Co-Pilot Rotation**
+### **Post 2: Spec-Driven Development - Building with an AI Co-Pilot Rotation** ✅ **(Written — `post2.md`)**
 
 *   **Core Idea:** How maintaining a living specification document makes it possible to work fluidly across multiple LLM platforms — and never lose context between sessions.
 *   **Key Talking Points:**
@@ -27,7 +27,8 @@
 
 ---
 
-### **Post 3: The Data Pipeline - Ingesting Market Data**
+### **Post 3: The Data Pipeline - Ingesting Market Data** ✅ **(Written — `post3.md`)**
+
 
 *   **Core Idea:** Detail the process of reliably fetching and storing market data, the lifeblood of the application.
 *   **Key Talking Points:**
@@ -37,7 +38,7 @@
 
 ---
 
-### **Post 4: Finding the Signal in the Noise - A TA Engine**
+### **Post 4: Finding the Signal in the Noise - A TA Engine** ✅ **(Written — `post4.md`)**
 
 *   **Core Idea:** Explain how the raw candle data is transformed into actionable trading signals using technical analysis.
 *   **Key Talking Points:**

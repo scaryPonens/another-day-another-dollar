@@ -74,6 +74,17 @@ go run ./cmd/mlbackfill
 | `ML_ENABLED` | Enable ML inference + training jobs |
 | `MARKET_INTEL_ENABLED` | Enable sentiment/fundamentals pipeline |
 
+## Blog Writing Guidelines
+
+When writing or planning blog posts for this series:
+
+- **Ask clarifying questions first** — before drafting, confirm the angle, the audience emphasis (aspiring programmer / manager / IC), and any specific anecdotes or personal details to weave in.
+- **Voice** — wax nerd poetic. First-person, reflective, technically honest. Write like someone who genuinely loves building things and wants to bring the reader along, not like a tutorial author ticking boxes.
+- **Technical language** — keep it light and engaging. Explain concepts through analogy and narrative before reaching for jargon. When jargon is unavoidable, earn it.
+- **Ground everything in the codebase** — always pull concrete examples from `PLAN.md`, actual file paths, real snippets, or lived decisions from this project. No hypotheticals when the real thing exists.
+- **Refer to `PLAN.md`** for phase history, deliverables, and status notes before writing about any phase or feature.
+- **Match the established style** — read `post0.md`, `post1.md`, and `post2.md` before drafting a new post to stay consistent with tone, structure, and section rhythm.
+
 ## Database Schema (migrations in order)
 
 - `000001` — candles, assets
