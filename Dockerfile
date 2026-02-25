@@ -26,9 +26,9 @@ COPY --from=builder /app/main .
 COPY --from=builder /app/mcp .
 COPY --from=builder /app/migrate .
 COPY --from=builder /app/mlbackfill .
-COPY --from=builder /app/sshserver .
+# COPY --from=builder /app/sshserver .
 
 EXPOSE 8080
-EXPOSE 2222
+# EXPOSE 2222
 
 CMD ["./main"]
