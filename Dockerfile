@@ -14,7 +14,7 @@ RUN CGO_ENABLED=0 GOOS=linux go build -o main ./cmd/server
 RUN CGO_ENABLED=0 GOOS=linux go build -o mcp ./cmd/mcp
 RUN CGO_ENABLED=0 GOOS=linux go build -o migrate ./cmd/migrate
 RUN CGO_ENABLED=0 GOOS=linux go build -o mlbackfill ./cmd/mlbackfill
-RUN CGO_ENABLED=0 GOOS=linux go build -o sshserver ./cmd/ssh
+# RUN CGO_ENABLED=0 GOOS=linux go build -o sshserver ./cmd/ssh
 
 FROM alpine:latest
 
