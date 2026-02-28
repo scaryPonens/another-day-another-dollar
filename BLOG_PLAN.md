@@ -48,7 +48,7 @@
 
 ---
 
-### **Post 5: A Picture is Worth a Thousand Pips - Visualizing Signals**
+### **Post 5: A Picture is Worth a Thousand Pips - Visualizing Signals** ✅ **(Written — `post5.md`)**
 
 *   **Core Idea:** Showcasing the unique feature of generating chart images on-the-fly.
 *   **Key Talking Points:**
@@ -58,7 +58,7 @@
 
 ---
 
-### **Post 6: Beyond Price - Integrating Sentiment and On-Chain Data**
+### **Post 6: Beyond Price - Integrating Sentiment and On-Chain Data** ✅ **(Written — `post6.md`)**
 
 *   **Core Idea:** Introduce the "Phase 7" market intelligence features, moving beyond pure price action.
 *   **Key Talking Points:**
@@ -68,7 +68,7 @@
 
 ---
 
-### **Post 7: The Ghost in the Machine - An ML-Powered Ensemble**
+### **Post 7: The Ghost in the Machine - An ML-Powered Ensemble** ** ✅ **(Written — `post7.md`)**
 
 *   **Core Idea:** Dive into the most advanced feature: using machine learning to create a "smarter" signal.
 *   **Key Talking Points:**
@@ -85,5 +85,10 @@
     *   **The REST API:** For traditional programmatic access.
     *   **The Telegram Bot:** For human-centric, on-the-go interaction (`internal/bot/`).
     *   **The MCP Service:** For next-generation AI agent integration (`internal/mcp/`), explaining the concept of tools and resources.
+    *   **The SSH Service:** A classic TUI for no-nonsense interaction (`internal/ssh/`).
+
+---
+
+
 
 ---

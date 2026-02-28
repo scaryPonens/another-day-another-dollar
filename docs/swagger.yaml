@@ -53,24 +53,69 @@ paths:
             additionalProperties:
               type: string
             type: object
+      security:
+      - ApiKeyAuth: []
       summary: Get historical OHLCV candles
       tags:
       - prices
-  /api/hello:
-    get:
-      description: Returns a hello world greeting
+  /api/market-intel/run:
+    post:
+      description: Runs one Phase 7 market-intel cycle and returns ingest/score/composite
+        counters
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
             additionalProperties:
               type: string
             type: object
-      summary: Say hello
+        "503":
+          description: Service Unavailable
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: Trigger fundamentals and sentiment ingestion/scoring manually
       tags:
-      - api
+      - market-intel
+  /api/ml/train:
+    post:
+      description: Runs an immediate ML training cycle and returns model training
+        outcomes
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "503":
+          description: Service Unavailable
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: Trigger ML model training manually
+      tags:
+      - ml
   /api/prices:
     get:
       description: Returns latest cached prices for all 10 tracked cryptocurrencies
@@ -82,6 +127,8 @@ paths:
           schema:
             additionalProperties: true
             type: object
+      security:
+      - ApiKeyAuth: []
       summary: Get current prices for all supported assets
       tags:
       - prices
@@ -107,24 +154,97 @@ paths:
             additionalProperties:
               type: string
             type: object
+      security:
+      - ApiKeyAuth: []
       summary: Get current price for a crypto asset
       tags:
       - prices
-  /api/slow:
+  /api/signals:
     get:
-      description: Returns a response after a simulated delay
+      description: Returns recent signals, optionally filtered by symbol/risk/indicator
+      parameters:
+      - description: Asset symbol (e.g., BTC, ETH)
+        in: query
+        name: symbol
+        type: string
+      - description: Risk level (1-5)
+        in: query
+        name: risk
+        type: integer
+      - description: Indicator key (rsi, macd, bollinger, volume_zscore, ml_logreg_up4h,
+          ml_xgboost_up4h, ml_ensemble_up4h, fund_sentiment_composite)
+        in: query
+        name: indicator
+        type: string
+      - default: 50
+        description: Number of signals (default 50, max 200)
+        in: query
+        name: limit
+        type: integer
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
             additionalProperties:
               type: string
             type: object
-      summary: Slow endpoint
+        "503":
+          description: Service Unavailable
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: Get generated trading signals
       tags:
-      - api
+      - signals
+  /api/signals/{id}/image:
+    get:
+      description: Returns the rendered PNG chart image for a signal id
+      parameters:
+      - description: Signal ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - image/png
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: file
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "503":
+          description: Service Unavailable
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: Get signal chart image
+      tags:
+      - signals
   /health:
     get:
       description: Returns the health status of the service
@@ -140,4 +260,9 @@ paths:
       summary: Health check
       tags:
       - health
+securityDefinitions:
+  ApiKeyAuth:
+    in: header
+    name: X-API-Key
+    type: apiKey
 swagger: "2.0"

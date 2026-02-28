@@ -38,8 +38,7 @@ func (h *Handler) SetMarketIntelRunner(runner MarketIntelRunner) {
 	h.marketIntelRunner = runner
 }
 
-func (h *Handler) RegisterRoutes(r *gin.Engine) {
-	r.GET("/health", h.Health)
+func (h *Handler) RegisterRoutes(r gin.IRouter) {
 	r.GET("/api/prices", h.GetAllPrices)
 	r.GET("/api/prices/:symbol", h.GetPrice)
 	r.GET("/api/candles/:symbol", h.GetCandles)

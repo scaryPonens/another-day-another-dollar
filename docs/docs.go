@@ -17,6 +17,11 @@ const docTemplate = `{
     "paths": {
         "/api/candles/{symbol}": {
             "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
                 "description": "Returns historical candle data for a given asset and interval",
                 "produces": [
                     "application/json"
@@ -68,19 +73,84 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/hello": {
-            "get": {
-                "description": "Returns a hello world greeting",
+        "/api/market-intel/run": {
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Runs one Phase 7 market-intel cycle and returns ingest/score/composite counters",
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
-                    "api"
+                    "market-intel"
                 ],
-                "summary": "Say hello",
+                "summary": "Trigger fundamentals and sentiment ingestion/scoring manually",
                 "responses": {
                     "200": {
                         "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/ml/train": {
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Runs an immediate ML training cycle and returns model training outcomes",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "ml"
+                ],
+                "summary": "Trigger ML model training manually",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -93,6 +163,11 @@ const docTemplate = `{
         },
         "/api/prices": {
             "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
                 "description": "Returns latest cached prices for all 10 tracked cryptocurrencies",
                 "produces": [
                     "application/json"
@@ -114,6 +189,11 @@ const docTemplate = `{
         },
         "/api/prices/{symbol}": {
             "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
                 "description": "Returns the latest cached price, 24h volume, and 24h change",
                 "produces": [
                     "application/json"
@@ -150,19 +230,128 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/slow": {
+        "/api/signals": {
             "get": {
-                "description": "Returns a response after a simulated delay",
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Returns recent signals, optionally filtered by symbol/risk/indicator",
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
-                    "api"
+                    "signals"
                 ],
-                "summary": "Slow endpoint",
+                "summary": "Get generated trading signals",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Asset symbol (e.g., BTC, ETH)",
+                        "name": "symbol",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Risk level (1-5)",
+                        "name": "risk",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Indicator key (rsi, macd, bollinger, volume_zscore, ml_logreg_up4h, ml_xgboost_up4h, ml_ensemble_up4h, fund_sentiment_composite)",
+                        "name": "indicator",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 50,
+                        "description": "Number of signals (default 50, max 200)",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/signals/{id}/image": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Returns the rendered PNG chart image for a signal id",
+                "produces": [
+                    "image/png"
+                ],
+                "tags": [
+                    "signals"
+                ],
+                "summary": "Get signal chart image",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Signal ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "file"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -217,6 +406,13 @@ const docTemplate = `{
                     "type": "number"
                 }
             }
+        }
+    },
+    "securityDefinitions": {
+        "ApiKeyAuth": {
+            "type": "apiKey",
+            "name": "X-API-Key",
+            "in": "header"
         }
     }
 }`

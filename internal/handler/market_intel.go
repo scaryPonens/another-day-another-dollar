@@ -21,6 +21,7 @@ type MarketIntelRunner interface {
 // @Success      200  {object}  map[string]interface{}
 // @Failure      503  {object}  map[string]string
 // @Failure      500  {object}  map[string]string
+// @Security     ApiKeyAuth
 // @Router       /api/market-intel/run [post]
 func (h *Handler) TriggerMarketIntelRun(c *gin.Context) {
 	if h.marketIntelRunner == nil {

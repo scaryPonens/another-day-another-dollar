@@ -21,6 +21,7 @@ type MLTrainingRunner interface {
 // @Success      200  {object}  map[string]interface{}
 // @Failure      503  {object}  map[string]string
 // @Failure      500  {object}  map[string]string
+// @Security     ApiKeyAuth
 // @Router       /api/ml/train [post]
 func (h *Handler) TriggerMLTraining(c *gin.Context) {
 	if h.mlTrainer == nil {

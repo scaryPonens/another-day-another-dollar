@@ -68,6 +68,9 @@ type Config struct {
 	SSHPort        int
 	SSHHostKeyPath string
 	SSHIdleTimeout int
+
+	RESTAPIKey         string
+	CORSAllowedOrigins []string
 }
 
 func Load() *Config {
@@ -383,6 +386,22 @@ func Load() *Config {
 	if v := strings.TrimSpace(os.Getenv("SSH_IDLE_TIMEOUT_SECS")); v != "" {
 		if n, err := strconv.Atoi(v); err == nil && n >= 0 {
 			cfg.SSHIdleTimeout = n
+		}
+	}
+
+	cfg.RESTAPIKey = strings.TrimSpace(os.Getenv("REST_API_KEY"))
+	if cfg.RESTAPIKey == "" {
+		log.Println("Warning: REST_API_KEY not set, REST API will be unauthenticated")
+	}
+
+	raw := strings.TrimSpace(os.Getenv("CORS_ALLOWED_ORIGINS"))
+	if raw == "" {
+		cfg.CORSAllowedOrigins = []string{"*"}
+	} else {
+		for _, o := range strings.Split(raw, ",") {
+			if s := strings.TrimSpace(o); s != "" {
+				cfg.CORSAllowedOrigins = append(cfg.CORSAllowedOrigins, s)
+			}
 		}
 	}
 

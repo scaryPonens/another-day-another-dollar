@@ -23,6 +23,7 @@ import (
 // @Success      200  {object}  map[string]interface{}
 // @Failure      400  {object}  map[string]string
 // @Failure      503  {object}  map[string]string
+// @Security     ApiKeyAuth
 // @Router       /api/signals [get]
 func (h *Handler) GetSignals(c *gin.Context) {
 	if h.signalService == nil {
@@ -93,6 +94,7 @@ func (h *Handler) GetSignals(c *gin.Context) {
 // @Failure      400  {object}  map[string]string
 // @Failure      404  {object}  map[string]string
 // @Failure      503  {object}  map[string]string
+// @Security     ApiKeyAuth
 // @Router       /api/signals/{id}/image [get]
 func (h *Handler) GetSignalImage(c *gin.Context) {
 	if h.signalService == nil {

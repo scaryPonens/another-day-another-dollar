@@ -19,6 +19,7 @@ import (
 // @Param        symbol  path  string  true  "Asset symbol (e.g., BTC, ETH)"
 // @Success      200  {object}  domain.PriceSnapshot
 // @Failure      400  {object}  map[string]string
+// @Security     ApiKeyAuth
 // @Router       /api/prices/{symbol} [get]
 func (h *Handler) GetPrice(c *gin.Context) {
 	ctx, span := h.tracer.Start(c.Request.Context(), "handler.get-price")
@@ -50,6 +51,7 @@ func (h *Handler) GetPrice(c *gin.Context) {
 // @Tags         prices
 // @Produce      json
 // @Success      200  {object}  map[string]interface{}
+// @Security     ApiKeyAuth
 // @Router       /api/prices [get]
 func (h *Handler) GetAllPrices(c *gin.Context) {
 	ctx, span := h.tracer.Start(c.Request.Context(), "handler.get-all-prices")
@@ -74,6 +76,7 @@ func (h *Handler) GetAllPrices(c *gin.Context) {
 // @Param        limit     query  int     false  "Number of candles (default 100, max 500)"  default(100)
 // @Success      200  {object}  map[string]interface{}
 // @Failure      400  {object}  map[string]string
+// @Security     ApiKeyAuth
 // @Router       /api/candles/{symbol} [get]
 func (h *Handler) GetCandles(c *gin.Context) {
 	ctx, span := h.tracer.Start(c.Request.Context(), "handler.get-candles")

@@ -31,6 +31,7 @@ import (
 	signalengine "bug-free-umbrella/internal/signal"
 	"bug-free-umbrella/pkg/tracing"
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 	swaggerFiles "github.com/swaggo/files"
@@ -82,6 +83,10 @@ var (
 
 // @host      localhost:8080
 // @BasePath  /
+
+// @securityDefinitions.apikey ApiKeyAuth
+// @in header
+// @name X-API-Key
 func main() {
 	loadEnvFunc()
 
@@ -278,9 +283,28 @@ func main() {
 
 	r := newRouterFunc()
 	r.Use(otelgin.Middleware("bug-free-umbrella"))
+	corsConfig := cors.Config{
+		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowHeaders:     []string{"X-API-Key", "Content-Type", "Authorization"},
+		ExposeHeaders:    []string{"Content-Length"},
+		AllowCredentials: false,
+		MaxAge:           12 * time.Hour,
+	}
+	if len(cfg.CORSAllowedOrigins) == 0 || (len(cfg.CORSAllowedOrigins) == 1 && cfg.CORSAllowedOrigins[0] == "*") {
+		corsConfig.AllowAllOrigins = true
+	} else {
+		corsConfig.AllowOrigins = cfg.CORSAllowedOrigins
+	}
+	r.Use(cors.New(corsConfig))
 
-	h.RegisterRoutes(r)
-	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+	// Public routes — no auth required
+	r.GET("/health", h.Health)
+
+	// Protected routes — require X-API-Key header
+	protected := r.Group("")
+	protected.Use(handler.APIKeyAuth(cfg.RESTAPIKey))
+	protected.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+	h.RegisterRoutes(protected)
 
 	srv := &http.Server{
 		Addr:    httpAddrFromEnv(),

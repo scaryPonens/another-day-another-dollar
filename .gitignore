@@ -32,5 +32,4 @@ go.work.sum
 # .vscode/
 .ssh
 server
-ssh
 post*.md
