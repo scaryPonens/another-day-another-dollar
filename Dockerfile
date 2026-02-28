@@ -14,7 +14,7 @@ RUN CGO_ENABLED=0 GOOS=linux go build -o main ./cmd/server
 RUN CGO_ENABLED=0 GOOS=linux go build -o mcp ./cmd/mcp
 RUN CGO_ENABLED=0 GOOS=linux go build -o migrate ./cmd/migrate
 RUN CGO_ENABLED=0 GOOS=linux go build -o mlbackfill ./cmd/mlbackfill
-# RUN CGO_ENABLED=0 GOOS=linux go build -o sshserver ./cmd/ssh
+RUN CGO_ENABLED=0 GOOS=linux go build -o sshserver ./cmd/ssh
 
 FROM alpine:latest
 
@@ -26,9 +26,9 @@ COPY --from=builder /app/main .
 COPY --from=builder /app/mcp .
 COPY --from=builder /app/migrate .
 COPY --from=builder /app/mlbackfill .
-# COPY --from=builder /app/sshserver .
+COPY --from=builder /app/sshserver .
 
 EXPOSE 8080
-# EXPOSE 2222
+EXPOSE 2222
 
 CMD ["./main"]
