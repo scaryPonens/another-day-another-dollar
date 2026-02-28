@@ -299,11 +299,11 @@ func main() {
 
 	// Public routes — no auth required
 	r.GET("/health", h.Health)
+	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	// Protected routes — require X-API-Key header
 	protected := r.Group("")
 	protected.Use(handler.APIKeyAuth(cfg.RESTAPIKey))
-	protected.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 	h.RegisterRoutes(protected)
 
 	srv := &http.Server{
