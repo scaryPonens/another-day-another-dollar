@@ -144,9 +144,13 @@ body {
   gap: 0.4rem;
   padding: 0.55rem 0.95rem;
   border-bottom: 1px solid rgba(141, 165, 182, 0.3);
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
 }
 
 .tabs button {
+  flex: 0 0 auto;
   border: 1px solid var(--line);
   border-radius: 6px;
   color: var(--muted);
@@ -179,7 +183,7 @@ body {
 
 .main-pane {
   padding: 0.7rem;
-  overflow: hidden;
+  overflow: auto;
 }
 
 .side-pane {
@@ -227,6 +231,10 @@ body {
   font-size: 0.87rem;
 }
 
+.touch-controls {
+  display: none;
+}
+
 .grid {
   display: grid;
   gap: 0.65rem;
@@ -268,6 +276,18 @@ th {
   font-weight: 600;
 }
 
+.row-clickable {
+  cursor: pointer;
+}
+
+.row-clickable:hover td {
+  background: rgba(77, 176, 255, 0.12);
+}
+
+.chart-link {
+  color: var(--accent);
+}
+
 .pos,
 .dir--long {
   color: var(--ok);
@@ -296,6 +316,11 @@ th {
   border-bottom: 1px solid rgba(141, 165, 182, 0.17);
   padding: 0.36rem 0;
   font-size: 0.84rem;
+}
+
+.table-scroll {
+  width: 100%;
+  overflow-x: auto;
 }
 
 .heat-grid {
@@ -398,6 +423,10 @@ th {
 .chat-input {
   display: flex;
   gap: 0.45rem;
+  position: sticky;
+  bottom: 0;
+  padding-top: 0.35rem;
+  background: linear-gradient(180deg, rgba(7, 18, 26, 0), rgba(7, 18, 26, 0.94) 45%);
 }
 
 .chat-input input {
@@ -431,8 +460,69 @@ th {
   font-size: 0.8rem;
 }
 
+.signal-chart-panel {
+  margin-top: 0.65rem;
+  border-top: 1px solid rgba(141, 165, 182, 0.22);
+  padding-top: 0.55rem;
+}
+
+.signal-chart-panel h4 {
+  margin: 0;
+  font-size: 0.86rem;
+}
+
+.signal-chart-image {
+  margin-top: 0.45rem;
+  display: block;
+  max-width: 100%;
+  border: 1px solid rgba(141, 165, 182, 0.28);
+  border-radius: 8px;
+  background: rgba(4, 12, 19, 0.78);
+}
+
+.signal-chart-modal {
+  display: none;
+}
+
+.signal-chart-modal__content {
+  width: min(920px, 96vw);
+  max-height: 92vh;
+  overflow: auto;
+  border-radius: 12px;
+  border: 1px solid rgba(141, 165, 182, 0.32);
+  background: rgba(7, 18, 26, 0.97);
+  padding: 0.6rem;
+}
+
+.signal-chart-modal__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.signal-chart-modal__header h3 {
+  margin: 0;
+  font-size: 0.92rem;
+}
+
+.signal-chart-modal__header button {
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--text);
+  border-radius: 8px;
+  padding: 0.3rem 0.55rem;
+}
+
+.signal-chart-image--modal {
+  margin-top: 0.5rem;
+  width: 100%;
+  max-width: 100%;
+}
+
 .statusline {
   display: flex;
+  flex-wrap: wrap;
   gap: 0.55rem;
   border-top: 1px solid rgba(141, 165, 182, 0.3);
   color: var(--muted);
@@ -456,6 +546,10 @@ th {
 }
 
 @media (max-width: 720px) {
+  .console-shell {
+    grid-template-rows: auto auto 1fr auto;
+  }
+
   .topbar {
     flex-direction: column;
     align-items: flex-start;
@@ -467,11 +561,130 @@ th {
   }
 
   .tabs {
+    padding: 0.45rem 0.55rem;
+    gap: 0.3rem;
+  }
+
+  .tabs button {
+    min-height: 38px;
+    padding: 0.4rem 0.6rem;
+    font-size: 0.84rem;
+  }
+
+  .workspace {
+    padding: 0.45rem;
+    gap: 0.45rem;
+  }
+
+  .main-pane {
+    padding: 0.5rem;
+  }
+
+  .panel-header p {
+    font-size: 0.8rem;
+  }
+
+  .touch-controls {
+    display: flex;
     flex-wrap: wrap;
+    gap: 0.35rem;
+    margin-top: 0.35rem;
+  }
+
+  .touch-pill {
+    border: 1px solid rgba(141, 165, 182, 0.45);
+    background: rgba(10, 23, 33, 0.95);
+    color: var(--text);
+    border-radius: 999px;
+    padding: 0.34rem 0.58rem;
+    font-size: 0.76rem;
+    max-width: 100%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .touch-pill--active {
+    border-color: rgba(77, 176, 255, 0.7);
+    background: linear-gradient(140deg, rgba(36, 121, 184, 0.85), rgba(77, 176, 255, 0.85));
+  }
+
+  .card {
+    padding: 0.45rem;
+  }
+
+  table {
+    font-size: 0.78rem;
+    min-width: 560px;
+  }
+
+  .hide-mobile {
+    display: none;
+  }
+
+  .signal-list li {
+    grid-template-columns: 48px 1fr 72px 42px;
+    font-size: 0.8rem;
+  }
+
+  .heat-grid {
+    grid-template-columns: repeat(3, minmax(80px, 1fr));
+    gap: 0.35rem;
+  }
+
+  .accuracy-row {
+    grid-template-columns: 78px 1fr auto;
+    gap: 0.4rem;
+  }
+
+  .accuracy-track {
+    height: 12px;
+  }
+
+  .side-pane {
+    display: none;
   }
 
   .chat-line {
     grid-template-columns: 1fr;
     gap: 0.15rem;
+  }
+
+  .signal-chart-panel h4 {
+    font-size: 0.82rem;
+  }
+
+  .signal-chart-panel {
+    display: none;
+  }
+
+  .signal-chart-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 40;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    padding: 0.55rem 0.45rem calc(0.55rem + env(safe-area-inset-bottom));
+    background: rgba(1, 6, 10, 0.82);
+  }
+
+  .signal-chart-modal__content {
+    width: 100%;
+    max-height: 92vh;
+    border-radius: 12px;
+  }
+
+  .chat-input {
+    gap: 0.35rem;
+  }
+
+  .chat-input button {
+    padding: 0.5rem 0.65rem;
+  }
+
+  .statusline {
+    padding: 0.35rem 0.45rem calc(0.35rem + env(safe-area-inset-bottom));
+    font-size: 0.73rem;
   }
 }

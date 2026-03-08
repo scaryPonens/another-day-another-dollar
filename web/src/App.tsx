@@ -5,6 +5,7 @@ import {
   getBacktestPredictions,
   getBacktestSummary,
   getPrices,
+  getSignalImage,
   getSignals,
   login,
   logout,
@@ -105,6 +106,14 @@ function readPredictionReturn(pred: Prediction): number | null {
   return value
 }
 
+function hasSignalChart(signal: Signal): boolean {
+  return Boolean(signal.image?.image_id)
+}
+
+function isMobileViewport(): boolean {
+  return typeof window !== 'undefined' && window.matchMedia('(max-width: 720px)').matches
+}
+
 export default function App() {
   const [authenticated, setAuthenticated] = useState(false)
   const [apiKeyInput, setAPIKeyInput] = useState('')
@@ -122,6 +131,9 @@ export default function App() {
   const [signalRiskIndex, setSignalRiskIndex] = useState(0)
   const [signalIndicatorIndex, setSignalIndicatorIndex] = useState(0)
   const [signalsScrollOffset, setSignalsScrollOffset] = useState(0)
+  const [selectedSignalID, setSelectedSignalID] = useState<number | null>(null)
+  const [selectedSignalChartURL, setSelectedSignalChartURL] = useState<string | null>(null)
+  const [signalChartModalOpen, setSignalChartModalOpen] = useState(false)
   const [backtestView, setBacktestView] = useState<'accuracy' | 'predictions'>('accuracy')
 
   const socketRef = useRef<ConsoleSocket | null>(null)
@@ -171,6 +183,12 @@ export default function App() {
     enabled: authenticated,
   })
 
+  const signalChartQuery = useQuery({
+    queryKey: ['signal-chart', apiKey, selectedSignalID],
+    queryFn: () => getSignalImage(apiKey, selectedSignalID ?? 0),
+    enabled: authenticated && selectedSignalID !== null,
+  })
+
   const backtestSummaryQuery = useQuery({
     queryKey: ['backtest-summary', apiKey],
     queryFn: () => getBacktestSummary(apiKey),
@@ -192,6 +210,38 @@ export default function App() {
   useEffect(() => {
     setSignalsScrollOffset(0)
   }, [signalSymbolIndex, signalRiskIndex, signalIndicatorIndex, signalsQuery.data])
+
+  useEffect(() => {
+    if (!selectedSignalID) {
+      setSelectedSignalChartURL(null)
+      setSignalChartModalOpen(false)
+      return
+    }
+
+    const selectedStillVisible = (signalsQuery.data ?? []).some((signal) => signal.id === selectedSignalID && hasSignalChart(signal))
+    if (!selectedStillVisible) {
+      setSelectedSignalID(null)
+      setSelectedSignalChartURL(null)
+    }
+  }, [signalsQuery.data, selectedSignalID])
+
+  useEffect(() => {
+    if (!signalChartQuery.data) {
+      setSelectedSignalChartURL(null)
+      return
+    }
+    const nextURL = URL.createObjectURL(signalChartQuery.data)
+    setSelectedSignalChartURL(nextURL)
+    return () => {
+      URL.revokeObjectURL(nextURL)
+    }
+  }, [signalChartQuery.data])
+
+  useEffect(() => {
+    if (activeTab !== 'signals') {
+      setSignalChartModalOpen(false)
+    }
+  }, [activeTab])
 
   const appendChatLine = useCallback((line: Omit<ChatLine, 'id' | 'at'>) => {
     setChatLines((prev) => [...prev, { id: uid(), at: new Date().toISOString(), ...line }])
@@ -324,6 +374,12 @@ export default function App() {
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && signalChartModalOpen) {
+        event.preventDefault()
+        setSignalChartModalOpen(false)
+        return
+      }
+
       const tab = tabFromKey(event.key)
       if (tab) {
         event.preventDefault()
@@ -390,7 +446,7 @@ export default function App() {
 
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
-  }, [activeTab, refreshActiveTab, signalsQuery.data])
+  }, [activeTab, refreshActiveTab, signalChartModalOpen, signalsQuery.data])
 
   async function handleLogin(event: React.FormEvent) {
     event.preventDefault()
@@ -517,26 +573,28 @@ export default function App() {
               <div className="grid two-up">
                 <article className="card">
                   <h3>Live Prices</h3>
-                  <table>
-                    <thead>
-                      <tr>
-                        <th>Symbol</th>
-                        <th>Price</th>
-                        <th>24h</th>
-                        <th>Volume</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {(dashboardPricesQuery.data ?? []).map((p) => (
-                        <tr key={p.symbol}>
-                          <td>{p.symbol}</td>
-                          <td>{formatPrice(p.price_usd)}</td>
-                          <td className={p.change_24h_pct >= 0 ? 'pos' : 'neg'}>{p.change_24h_pct.toFixed(2)}%</td>
-                          <td>{formatMoney(p.volume_24h)}</td>
+                  <div className="table-scroll">
+                    <table>
+                      <thead>
+                        <tr>
+                          <th>Symbol</th>
+                          <th>Price</th>
+                          <th>24h</th>
+                          <th className="hide-mobile">Volume</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody>
+                        {(dashboardPricesQuery.data ?? []).map((p) => (
+                          <tr key={p.symbol}>
+                            <td>{p.symbol}</td>
+                            <td>{formatPrice(p.price_usd)}</td>
+                            <td className={p.change_24h_pct >= 0 ? 'pos' : 'neg'}>{p.change_24h_pct.toFixed(2)}%</td>
+                            <td className="hide-mobile">{formatMoney(p.volume_24h)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 </article>
                 <article className="card">
                   <h3>24h Heat Map</h3>
@@ -617,38 +675,85 @@ export default function App() {
                   Filters: [s] symbol {SIGNAL_SYMBOL_OPTIONS[signalSymbolIndex]} | [r] risk {SIGNAL_RISK_OPTIONS[signalRiskIndex]} | [i] indicator{' '}
                   {SIGNAL_INDICATOR_OPTIONS[signalIndicatorIndex]} | [j/k] scroll
                 </p>
+                <div className="touch-controls touch-controls--signals">
+                  <button type="button" className="touch-pill" onClick={() => setSignalSymbolIndex((prev) => cycleIndex(prev, SIGNAL_SYMBOL_OPTIONS.length))}>
+                    Symbol: {SIGNAL_SYMBOL_OPTIONS[signalSymbolIndex]}
+                  </button>
+                  <button type="button" className="touch-pill" onClick={() => setSignalRiskIndex((prev) => cycleIndex(prev, SIGNAL_RISK_OPTIONS.length))}>
+                    Risk: {SIGNAL_RISK_OPTIONS[signalRiskIndex]}
+                  </button>
+                  <button
+                    type="button"
+                    className="touch-pill"
+                    onClick={() => setSignalIndicatorIndex((prev) => cycleIndex(prev, SIGNAL_INDICATOR_OPTIONS.length))}
+                  >
+                    Indicator: {SIGNAL_INDICATOR_OPTIONS[signalIndicatorIndex]}
+                  </button>
+                </div>
               </div>
               <article className="card">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>ID</th>
-                      <th>Symbol</th>
-                      <th>Int</th>
-                      <th>Indicator</th>
-                      <th>Dir</th>
-                      <th>Risk</th>
-                      <th>Time</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {visibleSignals.map((signal: Signal) => (
-                      <tr key={signal.id}>
-                        <td>{signal.id}</td>
-                        <td>{signal.symbol}</td>
-                        <td>{signal.interval}</td>
-                        <td>{signal.indicator}</td>
-                        <td className={`dir dir--${signal.direction}`}>{signal.direction.toUpperCase()}</td>
-                        <td>{signal.risk}</td>
-                        <td>{new Date(signal.timestamp).toLocaleString()}</td>
+                <div className="table-scroll">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>ID</th>
+                        <th>Symbol</th>
+                        <th className="hide-mobile">Int</th>
+                        <th className="hide-mobile">Indicator</th>
+                        <th>Dir</th>
+                        <th>Risk</th>
+                        <th className="hide-mobile">Time</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {visibleSignals.map((signal: Signal) => (
+                        <tr
+                          key={signal.id}
+                          className={hasSignalChart(signal) ? 'row-clickable' : undefined}
+                          onClick={() => {
+                            if (!hasSignalChart(signal)) {
+                              return
+                            }
+                            if (isMobileViewport()) {
+                              setSelectedSignalID(signal.id)
+                              setSignalChartModalOpen(true)
+                              return
+                            }
+                            setSelectedSignalID((current) => (current === signal.id ? null : signal.id))
+                          }}
+                        >
+                          <td className={hasSignalChart(signal) ? 'chart-link' : undefined}>
+                            {signal.id}
+                            {hasSignalChart(signal) ? ' [chart]' : ''}
+                          </td>
+                          <td>{signal.symbol}</td>
+                          <td className="hide-mobile">{signal.interval}</td>
+                          <td className="hide-mobile">{signal.indicator}</td>
+                          <td className={`dir dir--${signal.direction}`}>{signal.direction.toUpperCase()}</td>
+                          <td>{signal.risk}</td>
+                          <td className="hide-mobile">{new Date(signal.timestamp).toLocaleString()}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
                 <p className="footnote">
                   Showing {Math.min(signalsScrollOffset + 1, signalsQuery.data?.length ?? 0)}-
                   {Math.min(signalsScrollOffset + SIGNAL_VISIBLE_ROWS, signalsQuery.data?.length ?? 0)} of {signalsQuery.data?.length ?? 0}
                 </p>
+                <section className="signal-chart-panel">
+                  <h4>Signal Chart</h4>
+                  {selectedSignalID === null ? (
+                    <p className="footnote">Click a signal row marked with `[chart]` to view its chart.</p>
+                  ) : null}
+                  {selectedSignalID !== null && signalChartQuery.isLoading ? <p className="footnote">Loading chart...</p> : null}
+                  {selectedSignalID !== null && signalChartQuery.isError ? (
+                    <p className="footnote">Chart unavailable for signal #{selectedSignalID}.</p>
+                  ) : null}
+                  {selectedSignalID !== null && selectedSignalChartURL ? (
+                    <img src={selectedSignalChartURL} alt={`Signal ${selectedSignalID} chart`} className="signal-chart-image" />
+                  ) : null}
+                </section>
               </article>
             </div>
           ) : null}
@@ -658,6 +763,24 @@ export default function App() {
               <div className="panel-header">
                 <h2>Backtest</h2>
                 <p>View: {backtestView} | [v] toggle view | Shift+R refresh.</p>
+                <div className="touch-controls touch-controls--views">
+                  <button
+                    type="button"
+                    className={`touch-pill ${backtestView === 'accuracy' ? 'touch-pill--active' : ''}`}
+                    aria-pressed={backtestView === 'accuracy'}
+                    onClick={() => setBacktestView('accuracy')}
+                  >
+                    Accuracy
+                  </button>
+                  <button
+                    type="button"
+                    className={`touch-pill ${backtestView === 'predictions' ? 'touch-pill--active' : ''}`}
+                    aria-pressed={backtestView === 'predictions'}
+                    onClick={() => setBacktestView('predictions')}
+                  >
+                    Predictions
+                  </button>
+                </div>
               </div>
               {backtestView === 'accuracy' ? (
                 <div className="grid two-up">
@@ -686,61 +809,65 @@ export default function App() {
                   </article>
                   <article className="card">
                     <h3>Daily Accuracy (30d)</h3>
-                    <table>
-                      <thead>
-                        <tr>
-                          <th>Day</th>
-                          <th>Accuracy</th>
-                          <th>Correct</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {(backtestDailyQuery.data ?? []).slice(0, 30).map((item, idx) => (
-                          <tr key={`${readDay(item)}-${idx}`}>
-                            <td>{readDay(item).slice(0, 10)}</td>
-                            <td>{(readAccuracy(item) * 100).toFixed(1)}%</td>
-                            <td>
-                              {readCorrect(item)}/{readTotal(item)}
-                            </td>
+                    <div className="table-scroll">
+                      <table>
+                        <thead>
+                          <tr>
+                            <th>Day</th>
+                            <th>Accuracy</th>
+                            <th>Correct</th>
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                        </thead>
+                        <tbody>
+                          {(backtestDailyQuery.data ?? []).slice(0, 30).map((item, idx) => (
+                            <tr key={`${readDay(item)}-${idx}`}>
+                              <td>{readDay(item).slice(0, 10)}</td>
+                              <td>{(readAccuracy(item) * 100).toFixed(1)}%</td>
+                              <td>
+                                {readCorrect(item)}/{readTotal(item)}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
                   </article>
                 </div>
               ) : (
                 <article className="card">
                   <h3>Recent Resolved Predictions</h3>
-                  <table>
-                    <thead>
-                      <tr>
-                        <th>Symbol</th>
-                        <th>Int</th>
-                        <th>Model</th>
-                        <th>Dir</th>
-                        <th>Risk</th>
-                        <th>Correct</th>
-                        <th>Return</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {(backtestPredictionsQuery.data ?? []).map((pred, idx) => {
-                        const correct = readPredictionCorrect(pred)
-                        const ret = readPredictionReturn(pred)
-                        return (
-                          <tr key={`${readPredictionString(pred, 'symbol')}-${idx}`}>
-                            <td>{readPredictionString(pred, 'symbol')}</td>
-                            <td>{readPredictionString(pred, 'interval')}</td>
-                            <td>{readPredictionString(pred, 'model_key')}</td>
-                            <td>{readPredictionDirection(pred)}</td>
-                            <td>{readPredictionRisk(pred)}</td>
-                            <td>{correct === null ? '?' : correct ? 'YES' : 'NO'}</td>
-                            <td>{ret === null ? 'n/a' : `${ret > 0 ? '+' : ''}${(ret * 100).toFixed(2)}%`}</td>
-                          </tr>
-                        )
-                      })}
-                    </tbody>
-                  </table>
+                  <div className="table-scroll">
+                    <table>
+                      <thead>
+                        <tr>
+                          <th>Symbol</th>
+                          <th className="hide-mobile">Int</th>
+                          <th className="hide-mobile">Model</th>
+                          <th>Dir</th>
+                          <th>Risk</th>
+                          <th>Correct</th>
+                          <th>Return</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {(backtestPredictionsQuery.data ?? []).map((pred, idx) => {
+                          const correct = readPredictionCorrect(pred)
+                          const ret = readPredictionReturn(pred)
+                          return (
+                            <tr key={`${readPredictionString(pred, 'symbol')}-${idx}`}>
+                              <td>{readPredictionString(pred, 'symbol')}</td>
+                              <td className="hide-mobile">{readPredictionString(pred, 'interval')}</td>
+                              <td className="hide-mobile">{readPredictionString(pred, 'model_key')}</td>
+                              <td>{readPredictionDirection(pred)}</td>
+                              <td>{readPredictionRisk(pred)}</td>
+                              <td>{correct === null ? '?' : correct ? 'YES' : 'NO'}</td>
+                              <td>{ret === null ? 'n/a' : `${ret > 0 ? '+' : ''}${(ret * 100).toFixed(2)}%`}</td>
+                            </tr>
+                          )
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
                 </article>
               )}
             </div>
@@ -764,10 +891,34 @@ export default function App() {
         </aside>
       </section>
 
+      {signalChartModalOpen ? (
+        <section
+          className="signal-chart-modal"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Signal chart"
+          onClick={() => setSignalChartModalOpen(false)}
+        >
+          <article className="signal-chart-modal__content" onClick={(event) => event.stopPropagation()}>
+            <header className="signal-chart-modal__header">
+              <h3>Signal Chart</h3>
+              <button type="button" onClick={() => setSignalChartModalOpen(false)}>
+                Close
+              </button>
+            </header>
+            {selectedSignalID !== null && signalChartQuery.isLoading ? <p className="footnote">Loading chart...</p> : null}
+            {selectedSignalID !== null && signalChartQuery.isError ? <p className="footnote">Chart unavailable for signal #{selectedSignalID}.</p> : null}
+            {selectedSignalID !== null && selectedSignalChartURL ? (
+              <img src={selectedSignalChartURL} alt={`Signal ${selectedSignalID} chart`} className="signal-chart-image signal-chart-image--modal" />
+            ) : null}
+          </article>
+        </section>
+      ) : null}
+
       <footer className="statusline">
         <span>tab:{activeTab}</span>
         <span>session:{sessionId}</span>
-        <span>hint: 1-4 tabs | Tab/Shift+Tab cycle | Shift+R refresh</span>
+        <span className="hide-mobile">hint: 1-4 tabs | Tab/Shift+Tab cycle | Shift+R refresh</span>
       </footer>
     </main>
   )

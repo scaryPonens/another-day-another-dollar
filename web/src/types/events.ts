@@ -19,6 +19,13 @@ export type Signal = {
   risk: number
   direction: 'long' | 'short' | 'hold'
   details?: string
+  image?: {
+    image_id: number
+    mime_type: string
+    width: number
+    height: number
+    expires_at: string
+  }
 }
 
 export type DailyAccuracy = {

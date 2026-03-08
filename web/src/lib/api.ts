@@ -102,6 +102,17 @@ export async function getSignals(apiKey: string, query: SignalQuery): Promise<Si
   return payload.signals ?? []
 }
 
+export async function getSignalImage(apiKey: string, signalID: number): Promise<Blob> {
+  const response = await fetch(`/api/signals/${signalID}/image`, {
+    credentials: 'include',
+    headers: authHeaders(apiKey),
+  })
+  if (!response.ok) {
+    throw new Error('failed to fetch signal image')
+  }
+  return response.blob()
+}
+
 export async function getBacktestSummary(apiKey: string): Promise<DailyAccuracy[]> {
   const response = await fetch('/api/backtest/summary', {
     credentials: 'include',
